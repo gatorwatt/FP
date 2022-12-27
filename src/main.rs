@@ -7,6 +7,11 @@
 // future update may do this without comparison to f32
 // just need to think about cleanest way to implement
 
+// I think it goes without saying that each of the subcomponents herein
+// probably have the potential for further refinement and optimization
+// the goal here is to establish a foundation for operational primitives
+// which may be further refined going forward if there is a need
+
 // note that currently using u8 for a lot of bitwidth variables
 // which might limit this for extremely high precision applicaitons
 // may reconsider basis down the raod
@@ -20,6 +25,8 @@
 // methods do not currently implement flagging for edge cases
 // just rely on propagation of special encodings
 
+// right now don't have a really clean mechanism for overflow / underflow, pending further thought
+
 
 // #![allow(warnings)]
 
@@ -27,10 +34,10 @@
 use rand::Rng;
 use rand::thread_rng;
 
-// used to sample from a distribution
-// (currently only used for validations)
-use rand::prelude::*;
-use rand_distr::{Normal, Uniform};
+// // used to sample from a distribution
+// // (currently only used for validations)
+// use rand::prelude::*;
+// use rand_distr::{Normal, Uniform};
 
 // // used to plot histogram
 // use plotlib::page::Page;
@@ -332,7 +339,7 @@ fn main() {
   // // // alternatively can define a specific array to validate value
   // // // let sampled_array : Vec<bool> = vec![true, false, false, true, true, false, false, true];
 
-  // let recovered_value = get_value(&sampled_array, bitwidth, expwidth, &special_encodings);
+  // let recovered_value = get_value(&sampled_array, expwidth, &special_encodings);
   // println!("");
   // println!("{:?}", sampled_array);
   // println!("recovered_value = {}", recovered_value);
@@ -351,23 +358,23 @@ fn main() {
   //_______________________________________________________
   // ### [c] Sample or Specify a target float ###
   
-  println!("");
-  println!("");
+  // println!("");
+  // println!("");
 
 
-  // 1
-  println!("");
-  println!("floats for validation can be sampled or specified:");
-  // if wanted to sample from a Gaussian
-  let normal = Normal::new(0.0, 1.0).unwrap();
-  let target_number:f64 = normal.sample(&mut rand::thread_rng());
-  println!("gaussian sample = {}", target_number);
+  // // 1
+  // println!("");
+  // println!("floats for validation can be sampled or specified:");
+  // // if wanted to sample from a Gaussian
+  // let normal = Normal::new(0.0, 1.0).unwrap();
+  // let target_number:f64 = normal.sample(&mut rand::thread_rng());
+  // println!("gaussian sample = {}", target_number);
 
-  // 2
-  // if wanted to sample from a Uniform
-  let uniform = Uniform::new::<f64, f64>(-1.0, 1.0);
-  let target_number:f64 = uniform.sample(&mut rand::thread_rng());
-  println!("uniform sample = {}", target_number);
+  // // 2
+  // // if wanted to sample from a Uniform
+  // let uniform = Uniform::new::<f64, f64>(-1.0, 1.0);
+  // let target_number:f64 = uniform.sample(&mut rand::thread_rng());
+  // println!("uniform sample = {}", target_number);
   
   // // 3
   // // or for a specific target number can specify here
@@ -383,7 +390,7 @@ fn main() {
   println!("encoded_float = {:?}", encoded_float);
 
   // 5
-  let recovered_value = get_value(&encoded_float, bitwidth, expwidth, &special_encodings);
+  let recovered_value = get_value(&encoded_float, expwidth, &special_encodings);
   println!("");
   println!("target_number = {}", target_number);
   println!("recovered_value = {}", recovered_value);
@@ -393,15 +400,15 @@ fn main() {
   // _____________________________________________________
   // ### [d] Configurable 754 benchmarking ###
 
-  let sampled_array : Vec<bool> = sample_bool_array(bitwidth);
-  println!("");
-  println!("Sample a full encoding of bool entries:");
-  println!("{:?}", sampled_array);
-  //this is based on generic conventions resembling 754
-  println!("Convert to float:");
-  let value = get_value(&sampled_array, bitwidth, expwidth, &special_encodings);
-  println!("value = {}", value);
+  // let sampled_array : Vec<bool> = sample_bool_array(bitwidth);
+  // println!("");
+  // println!("Sample a full encoding of bool entries:");
   // println!("{:?}", sampled_array);
+  // //this is based on generic conventions resembling 754
+  // println!("Convert to float:");
+  // let value = get_value(&sampled_array, expwidth, &special_encodings);
+  // println!("value = {}", value);
+  // // println!("{:?}", sampled_array);
 
 
 
@@ -498,8 +505,8 @@ fn main() {
   // println!("{}", Page::single(&v).dimensions(60, 15).to_text().unwrap());
 
   
-
-  //__________________________________________________________
+  
+  //________________________________________________________
   // ### [f] Operations benchmarking ###
 
   let mut sampled_array_1 : Vec<bool> = vec![];
@@ -510,12 +517,109 @@ fn main() {
   let mut recovered_value_2 : f32 = 0.;
   let mut recovered_value_3 : f32 = 0.;
 
+  let mut reverted_vector : f32 = 0.;
+
+  let mut f32_comparison : f32 = 0.;
+  let mut recovered_array_from_f32 : Vec<bool> = vec![];
+
   let mut recovered_int_1 : u32 = 0;
   let mut recovered_int_2 : u32 = 0;
   let mut recovered_int_3 : u32 = 0;
   
   let mut returned_bool:bool = false;
   
+  // // validate_bitwise_and_integer_operations();
+
+  benchmark_bitwise_ops(bitwidth);
+
+  // // _______________
+
+  // // integer_convert(.) - for use to validate the integer arithmetic operations
+  // // integer_revert(.) - translates a u32 to Vec<bool>
+  // // integer_add(.)
+  // // integer_increment(.) - increments vector encoding by 1
+  // // integer_decrement(.) - decrements vector encoding by 1
+  // // integer_subtract(.)
+  // // integer_multiply(.)
+  // // integer_greaterthan(.)
+  // // integer_divide(.)
+
+  benchmark_integer_ops(bitwidth);
+
+  // // _______________
+
+  // // fp_greaterthan(.)
+  // // fp_add(.)
+  // // fp_add_variable_exp(.)
+  // // integer_add_extended(.)
+  // // fp_subtract(.)
+  // // fp_multiply(.)
+  // // fp_divide(.)
+  // // fp_compare(.)
+  // // fp_match_precision(.)
+  // // fp_FMA(.)
+  // // fp_dot(.)
+
+
+
+  benchmark_fp_ops(bitwidth, expwidth, &special_encodings);
+  
+
+  println!("_______________");
+  println!("");
+  println!("Additional operations implemented, pending further quality control:");
+  println!("");
+  // println!("- fp_multiply");
+  println!("- fp_divide (doesn't yet support arbitrary precision");
+  // println!("- fp_compare");
+  // println!("- fp_match_precision");
+  println!("- nearest or stochastic rounding");
+  // println!("- fp_match_FMA");
+  // println!("- fp_match_dot");
+  println!("- posits format conversions");
+  // println!("- special encodings support for some of operations pending");
+  println!("- special encodings support for mixed precision operations pending");
+  println!("- flags / saturation output for fp overflow / underflow pending");
+  println!(" ");
+
+  
+}
+
+// // ___________________________________________________________
+// // *** [0] Benchmarking Functions ***
+// // following intended as extensions:
+// // - compare information retention for a specific float
+// // - derive aggregate metric for information retention in set of sampled floats
+// // - information retention comparisons between alternate encoding types
+// // - generate scatter plot of all encodings
+// // - identify a model approximate distribution based on densities of an encoding type
+// // - derive signal to noise ratio for encoding type in comparison to a target distribution
+
+// benchmark_bitwise_ops
+// benchmark_integer_ops
+// benchmark_fp_ops
+
+fn benchmark_bitwise_ops(bitwidth:u8) {
+
+  let mut sampled_array_1 : Vec<bool> = vec![];
+  let mut sampled_array_2 : Vec<bool> = vec![];
+  let mut sampled_array_3 : Vec<bool> = vec![];
+  
+  let mut recovered_value_1 : f32 = 0.;
+  let mut recovered_value_2 : f32 = 0.;
+  let mut recovered_value_3 : f32 = 0.;
+
+  let mut reverted_vector : f32 = 0.;
+
+  let mut f32_comparison : f32 = 0.;
+  let mut recovered_array_from_f32 : Vec<bool> = vec![];
+
+  let mut recovered_int_1 : u32 = 0;
+  let mut recovered_int_2 : u32 = 0;
+  let mut recovered_int_3 : u32 = 0;
+  
+  let mut returned_bool:bool = false;
+
   // validate_bitwise_and_integer_operations();
 
   // bitwise_and
@@ -604,17 +708,30 @@ fn main() {
   println!("result: {:?}", sampled_array_3);
   println!("");
 
-  // _______________
+  
+}
 
-  // integer_convert(.) - for use to validate the integer arithmetic operations
-  // integer_revert(.) - translates a u32 to Vec<bool>
-  // integer_add(.)
-  // integer_increment(.) - increments vector encoding by 1
-  // integer_decrement(.) - decrements vector encoding by 1
-  // integer_subtract(.)
-  // integer_multiply(.)
-  // integer_greaterthan(.)
-  // integer_divide(.)
+
+fn benchmark_integer_ops(bitwidth:u8) {
+
+  let mut sampled_array_1 : Vec<bool> = vec![];
+  let mut sampled_array_2 : Vec<bool> = vec![];
+  let mut sampled_array_3 : Vec<bool> = vec![];
+  
+  let mut recovered_value_1 : f32 = 0.;
+  let mut recovered_value_2 : f32 = 0.;
+  let mut recovered_value_3 : f32 = 0.;
+
+  let mut reverted_vector : f32 = 0.;
+
+  let mut f32_comparison : f32 = 0.;
+  let mut recovered_array_from_f32 : Vec<bool> = vec![];
+
+  let mut recovered_int_1 : u32 = 0;
+  let mut recovered_int_2 : u32 = 0;
+  let mut recovered_int_3 : u32 = 0;
+  
+  let mut returned_bool:bool = false;
 
 
 
@@ -699,21 +816,28 @@ fn main() {
 
   // integer_divide
   sampled_array_1 = sample_bool_array(bitwidth);
-  // sampled_array_2 = sample_bool_array(bitwidth);
+  sampled_array_2 = sample_bool_array(bitwidth);
 
-  // divide may result in underflow for fixed integer width
-  // so here applying arbitrary small second value = 3
-  sampled_array_2 = vec![false, false, false, false, false, false, true, true];
-  let mut sampled_array_2_len = sampled_array_2.len();
-  if sampled_array_2_len > bitwidth as usize {
-    for _i in 0..(sampled_array_2_len - bitwidth as usize ) {
-      sampled_array_2.remove(0);
-    }
-  } else if sampled_array_2_len < bitwidth as usize {
-    for _i in 0..(bitwidth as usize - sampled_array_2_len) {
-      sampled_array_2.insert(0, false);
-    }
+
+  // can set first few bits in sampled_array_2 as false
+  // to promote outputs > 1\
+  for i in 0..(bitwidth as usize /2 as usize) {
+    sampled_array_2[i] = false;
   }
+
+  // // divide may result in underflow for fixed integer width
+  // // so here applying arbitrary small second value = 3
+  // sampled_array_2 = vec![false, false, false, false, false, false, true, true];
+  // let mut sampled_array_2_len = sampled_array_2.len();
+  // if sampled_array_2_len > bitwidth as usize {
+  //   for _i in 0..(sampled_array_2_len - bitwidth as usize ) {
+  //     sampled_array_2.remove(0);
+  //   }
+  // } else if sampled_array_2_len < bitwidth as usize {
+  //   for _i in 0..(bitwidth as usize - sampled_array_2_len) {
+  //     sampled_array_2.insert(0, false);
+  //   }
+  // }
   
   recovered_int_1 = integer_convert(&sampled_array_1);
   recovered_int_2 = integer_convert(&sampled_array_2);
@@ -730,24 +854,41 @@ fn main() {
   println!("returned vector: {:?}", sampled_array_3);
   println!("");
   println!("{} / {} = {}", recovered_int_1, recovered_int_2, recovered_int_3);
+  println!("checksum = {}", (recovered_int_1 / recovered_int_2) as u32);
   println!("");
 
+}
+
+
+fn benchmark_fp_ops(bitwidth:u8, expwidth:u8, special_encodings:&SpecialEncodings) {
 
 
 
+  let mut sampled_array_1 : Vec<bool> = vec![];
+  let mut sampled_array_2 : Vec<bool> = vec![];
+  let mut sampled_array_3 : Vec<bool> = vec![];
   
+  let mut recovered_value_1 : f32 = 0.;
+  let mut recovered_value_2 : f32 = 0.;
+  let mut recovered_value_3 : f32 = 0.;
 
+  let mut reverted_vector : f32 = 0.;
 
+  let mut f32_comparison : f32 = 0.;
+  let mut recovered_array_from_f32 : Vec<bool> = vec![];
 
+  let mut recovered_int_1 : u32 = 0;
+  let mut recovered_int_2 : u32 = 0;
+  let mut recovered_int_3 : u32 = 0;
   
-
-
+  let mut returned_bool:bool = false;
+  
 
   // fp_greaterthan
   sampled_array_1 = sample_bool_array(bitwidth);
   sampled_array_2 = sample_bool_array(bitwidth);
-  recovered_value_1 = get_value(&sampled_array_1, bitwidth, expwidth, &special_encodings);
-  recovered_value_2 = get_value(&sampled_array_2, bitwidth, expwidth, &special_encodings);
+  recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+  recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
   returned_bool = fp_greaterthan(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
 
 
@@ -763,171 +904,577 @@ fn main() {
   println!("");
 
 
-  println!("############################################");
-  println!("Floating point operations pending validation");
-  println!("############################################");
-  println!("");
+
+  for i in 0..1000 {
+    
+    // fp_add
+    sampled_array_1 = sample_bool_array(bitwidth);
+    sampled_array_2 = sample_bool_array(bitwidth);
+  
+    // sampled_array_1 = vec![false, true, true, true, true, false, true, false];
+    // sampled_array_2 = vec![false, true, true, true, false, true, false, false];
+  
+    println!("");
+    println!("________");
+    println!("FP ADDITION");
+    println!("sampled vector 1 {:?}", sampled_array_1);
+    println!("sampled vector 2 {:?}", sampled_array_2);
+  
+    recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+    recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
+    sampled_array_3 = fp_add(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
+    recovered_value_3 = get_value(&sampled_array_3, expwidth, &special_encodings);
+    
+  
+    println!("operation: fp_add");
+    println!("returned vector: {:?}", sampled_array_3);
+    println!("returned vector length: {}", sampled_array_3.len());
+    reverted_vector = get_value(&sampled_array_3, expwidth, &special_encodings);
+    println!("reverted vector: {}", reverted_vector);
+    println!("");
+    println!("{} + {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
+    f32_comparison = recovered_value_1 + recovered_value_2;
+    println!("f32 comparison: {}", f32_comparison);
+    let recovered_array_from_f32 = encode_float(f32_comparison as f64, bitwidth, expwidth, &special_encodings);
+    println!("comparison vector: {:?}", recovered_array_from_f32);
+    println!("");
+
+    
+    
+    if f32_comparison != reverted_vector && f32_comparison==f32_comparison && reverted_vector==reverted_vector {
+      break
+    }
+
+    break
+    
+  }
+
+
+  for i in 0..1 {
+    
+    // fp_add
+    sampled_array_1 = sample_bool_array(bitwidth);
+    sampled_array_2 = sample_bool_array(bitwidth);
+  
+    sampled_array_1 = vec![false, true, true, true, true, false, true, true];
+    sampled_array_2 = vec![false, true, true, true, false, true, false, true];
+  
+    println!("");
+    println!("________");
+    println!("FP ADDITION (VARIABLE EXPONENT)");
+    println!("sampled vector 1 {:?}", sampled_array_1);
+    println!("sampled vector 2 {:?}", sampled_array_2);
+  
+    recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+    recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
+
+    let mut output_expwidth:u8 = expwidth;
+    
+    (sampled_array_3, output_expwidth) = fp_add_variable_exp(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
+
+    
+    recovered_value_3 = get_value(&sampled_array_3, output_expwidth, &special_encodings);
+    
+  
+    println!("operation: fp_add_variable_exp");
+    println!("returned vector: {:?}", sampled_array_3);
+    println!("returned vector length: {}", sampled_array_3.len());
+    reverted_vector = get_value(&sampled_array_3, output_expwidth, &special_encodings);
+    println!("reverted vector: {}", reverted_vector);
+    println!("");
+    println!("{} + {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
+    f32_comparison = recovered_value_1 + recovered_value_2;
+    println!("f32 comparison: {}", f32_comparison);
+    let recovered_array_from_f32 = encode_float(f32_comparison as f64, sampled_array_3.len() as u8, output_expwidth, &special_encodings);
+    println!("comparison vector: {:?}", recovered_array_from_f32);
+    println!("");
+
+    
+    
+    if f32_comparison != reverted_vector && f32_comparison==f32_comparison && reverted_vector==reverted_vector {
+      break
+    }
+
+    break
+    
+  }
+
+
+  for i in 0..1 {
+    
+    // fp_add
+    sampled_array_1 = sample_bool_array(bitwidth + 4);
+    sampled_array_2 = sample_bool_array(bitwidth + 3);
+  
+    // sampled_array_1 = vec![false, true, true, true, true, false, true, true];
+    // sampled_array_2 = vec![false, true, true, true, false, true, false, true];
+  
+    println!("");
+    println!("________");
+    println!("INTEGER ADDITION (EXTENDED)");
+    println!("sampled vector 1 {:?}", sampled_array_1);
+    println!("sampled vector 2 {:?}", sampled_array_2);
+  
+    recovered_value_1 = integer_convert(&sampled_array_1) as f32;
+    recovered_value_2 = integer_convert(&sampled_array_2) as f32;
+
+    let mut output_expwidth:u8 = expwidth;
+    
+    sampled_array_3 = integer_add_extended(&sampled_array_1, &sampled_array_2, false, false, true);
+
+// fn integer_add_extended(vector_one:&Vec<bool>, vector_two:&Vec<bool>, append_leading_bits:bool, assumed_leading_bit:bool, rightside_aligned:bool) -> Vec<bool> {
+
+    
+    recovered_value_3 = integer_convert(&sampled_array_3) as f32;
+    
+  
+    println!("operation: integer_add_extended");
+    println!("returned vector: {:?}", sampled_array_3);
+    println!("returned vector length: {}", sampled_array_3.len());
+    reverted_vector = integer_convert(&sampled_array_3) as f32;
+    println!("reverted vector: {}", reverted_vector);
+    println!("");
+    println!("{} + {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
+    f32_comparison = recovered_value_1 + recovered_value_2;
+    println!("f32 comparison: {}", f32_comparison);
+    let recovered_array_from_f32 = integer_revert(&(f32_comparison as u32), bitwidth);
+    println!("comparison vector: {:?}", recovered_array_from_f32);
+    println!("");
+
+    
+    
+    if f32_comparison != reverted_vector && f32_comparison==f32_comparison && reverted_vector==reverted_vector {
+      break
+    }
+
+    break
+    
+  }
+  
+
+
+  let mut f32_comparison : f32 = 0.;
+  let mut recovered_array_from_f32 : Vec<bool> = vec![];
+
+  for i in 0..1000 {
+    
+  
+    // fp_subtract
+    sampled_array_1 = sample_bool_array(bitwidth);
+    sampled_array_2 = sample_bool_array(bitwidth);
+
+    // sampled_array_1 = vec![];
+    // sampled_array_2 = vec![];
+    
+    recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+    recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
+
+    println!("");
+    println!("________");
+    println!("FP SUBTRACTION");
+    println!("sampled vector 1 {:?}", sampled_array_1);
+    println!("sampled vector 2 {:?}", sampled_array_2);
+    println!("operation: fp_subtract");
+
+    
+    sampled_array_3 = fp_subtract(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
+    recovered_value_3 = get_value(&sampled_array_3, expwidth, &special_encodings);
+  
+
+    println!("returned vector: {:?}", sampled_array_3);
+    println!("returned vector length: {}", sampled_array_3.len());
+    reverted_vector = get_value(&sampled_array_3, expwidth, &special_encodings);
+    println!("reverted vector: {}", reverted_vector);
+    println!("");
+    println!("{} - {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
+    f32_comparison = recovered_value_1 - recovered_value_2;
+    println!("f32 comparison: {}", f32_comparison);
+    let recovered_array_from_f32 = encode_float(f32_comparison as f64, bitwidth, expwidth, &special_encodings);
+    println!("comparison vector: {:?}", recovered_array_from_f32);
+    println!("");
+
+    
+    
+    if f32_comparison != reverted_vector && f32_comparison==f32_comparison && reverted_vector==reverted_vector {
+      break
+    }
+
+    break
+    
+  }
+
+
+  for i in 0..1000 {
+    
+  
+    // fp_multiply
+    sampled_array_1 = sample_bool_array(bitwidth);
+    sampled_array_2 = sample_bool_array(bitwidth);
+
+    // println!("UNDERFLOW SCENARIO");
+    // sampled_array_1 = vec![true, false, false, false, true, false, false, true];
+    // sampled_array_2 = vec![true, false, false, false, true, true, false, true];
+
+    // println!("OVERFLOW SCENARIO");
+    // sampled_array_1 = vec![true, true, true, false, false, true, false, false];
+    // sampled_array_2 = vec![true, true, false, true, true, false, true, true];
+
+    
+    recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+    recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
+
+    println!("");
+    println!("________");
+    println!("FP MULTIPLY");
+    println!("sampled vector 1 {:?}", sampled_array_1);
+    println!("sampled vector 2 {:?}", sampled_array_2);
+    println!("operation: fp_multiply");
+
+    
+    sampled_array_3 = fp_multiply(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
+    recovered_value_3 = get_value(&sampled_array_3, expwidth, &special_encodings);
+  
+
+    println!("returned vector: {:?}", sampled_array_3);
+    println!("returned vector length: {}", sampled_array_3.len());
+    reverted_vector = get_value(&sampled_array_3, expwidth, &special_encodings);
+    println!("reverted vector: {}", reverted_vector);
+    println!("");
+    println!("{} * {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
+    f32_comparison = recovered_value_1 * recovered_value_2;
+    println!("f32 comparison: {}", f32_comparison);
+    let recovered_array_from_f32 = encode_float(f32_comparison as f64, bitwidth, expwidth, &special_encodings);
+    println!("comparison vector: {:?}", recovered_array_from_f32);
+    println!("");
+
+    
+    
+    if f32_comparison != reverted_vector && f32_comparison==f32_comparison && reverted_vector==reverted_vector {
+      break
+    }
+
+    // break
+    
+  }
+
 
   
-  // fp_add
-  sampled_array_1 = sample_bool_array(bitwidth);
-  sampled_array_2 = sample_bool_array(bitwidth);
-  recovered_value_1 = get_value(&sampled_array_1, bitwidth, expwidth, &special_encodings);
-  recovered_value_2 = get_value(&sampled_array_2, bitwidth, expwidth, &special_encodings);
-  sampled_array_3 = fp_add(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
-  recovered_value_3 = get_value(&sampled_array_3, bitwidth, expwidth, &special_encodings);
+
+
+  for i in 0..1000 {
+    
   
+    // fp_divide
+    sampled_array_1 = sample_bool_array(bitwidth);
+    sampled_array_2 = sample_bool_array(bitwidth);
+
+    // sampled_array_1 = vec![true, false, true, true, true, false, false, true];
+    // sampled_array_2 = vec![false, true, true, true, false, true, true, false];
+
+    // println!("UNDERFLOW SCENARIO");
+    // sampled_array_1 = vec![true, false, false, false, true, false, false, true];
+    // sampled_array_2 = vec![true, false, false, false, true, true, false, true];
+
+    // println!("OVERFLOW SCENARIO");
+    // sampled_array_1 = vec![true, true, true, false, false, true, false, false];
+    // sampled_array_2 = vec![true, true, false, true, true, false, true, true];
+
+    
+    recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+    recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
+
+    println!("");
+    println!("________");
+    println!("FP DIVIDE");
+    println!("sampled vector 1 {:?}", sampled_array_1);
+    println!("sampled vector 2 {:?}", sampled_array_2);
+    println!("operation: fp_divide");
+
+    
+    sampled_array_3 = fp_divide(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
+    // recovered_value_3 = get_value(&sampled_array_3, expwidth, &special_encodings);
+    recovered_value_3 = get_value(&sampled_array_3, expwidth, &special_encodings);
+  
+    println!("");
+    println!("returned vector: {:?}", sampled_array_3);
+    println!("returned vector length: {}", sampled_array_3.len());
+    reverted_vector = get_value(&sampled_array_3, expwidth, &special_encodings);
+    println!("reverted vector: {}", reverted_vector);
+    println!("");
+    println!("{} / {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
+    f32_comparison = recovered_value_1 / recovered_value_2;
+    println!("f32 comparison: {}", f32_comparison);
+    let recovered_array_from_f32 = encode_float(f32_comparison as f64, bitwidth * 2, expwidth, &special_encodings);
+    println!("comparison vector: {:?}", recovered_array_from_f32);
+    println!("");
+
+    
+    if f32_comparison != reverted_vector && f32_comparison==f32_comparison && reverted_vector==reverted_vector {
+      break
+    }
+
+    break
+    
+  }
+
+
+
+
+
+  // fp_compare
+
+  let tolerance:Vec<bool> = vec![false, false, false, false, true, false, false, true, false];
+  
+  sampled_array_1 = sample_bool_array(bitwidth+4);
+  sampled_array_2 = sample_bool_array(bitwidth);
+  sampled_array_3 = sample_bool_array(bitwidth); // tolerance
+
+  // sampled_array_1 = vec![false, false, false, true, true, false, true, false];
+  // sampled_array_2 = vec![false, false, false, true, true, false, true, true];
+  // sampled_array_3 = vec![false, false, false, false, true, false, true, true];; // tolerance
+
   println!("");
   println!("________");
-  println!("FP ADDITION");
+  println!("FP COMPARE");
   println!("sampled vector 1 {:?}", sampled_array_1);
   println!("sampled vector 2 {:?}", sampled_array_2);
-  println!("operation: fp_add");
-  println!("returned vector: {:?}", sampled_array_3);
-  println!("");
-  println!("{} + {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
-  println!("");
+  println!("tolerance {:?}", sampled_array_3);
+  println!("operation: fp_compare");
+
   
+  recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+  recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
+  returned_bool = fp_compare(&sampled_array_1, &sampled_array_2, &tolerance, expwidth, expwidth, expwidth, &special_encodings);
 
-  // fp_subtract
-  sampled_array_1 = sample_bool_array(bitwidth);
-  sampled_array_2 = sample_bool_array(bitwidth);
-  recovered_value_1 = get_value(&sampled_array_1, bitwidth, expwidth, &special_encodings);
-  recovered_value_2 = get_value(&sampled_array_2, bitwidth, expwidth, &special_encodings);
-  sampled_array_3 = fp_subtract(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
-  recovered_value_3 = get_value(&sampled_array_3, bitwidth, expwidth, &special_encodings);
 
+  println!("returned bool: {}", returned_bool);
   println!("");
-  println!("________");
-  println!("FP SUBTRACTION");
-  println!("sampled vector 1 {:?}", sampled_array_1);
-  println!("sampled vector 2 {:?}", sampled_array_2);
-  println!("operation: fp_subtract");
-  println!("returned vector: {:?}", sampled_array_3);
+  println!("{} == {} = {}", recovered_value_1, recovered_value_2, returned_bool);
   println!("");
-  println!("{} - {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
-  println!("");
+  // end fp compare validate
+ 
 
 
-  // // fp_multiply
-  // sampled_array_1 = sample_bool_array(bitwidth);
-  // sampled_array_2 = sample_bool_array(bitwidth);
-  // recovered_value_1 = get_value(&sampled_array_1, bitwidth, expwidth, &special_encodings);
-  // recovered_value_2 = get_value(&sampled_array_2, bitwidth, expwidth, &special_encodings);
-  // sampled_array_3 = fp_multiply(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
-  // recovered_value_3 = get_value(&sampled_array_3, bitwidth, expwidth, &special_encodings);
-
-  // println!("");
-  // println!("________");
-  // println!("FP MULTIPLICATION");
-  // println!("sampled vector 1 {:?}", sampled_array_1);
-  // println!("sampled vector 2 {:?}", sampled_array_2);
-  // println!("operation: fp_multiply");
-  // println!("returned vector: {:?}", sampled_array_3);
-  // println!("");
-  // println!("{} * {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
-  // println!("");
-
-
-
-  // // fp_divide
-  // sampled_array_1 = sample_bool_array(bitwidth);
-  // sampled_array_2 = sample_bool_array(bitwidth);
-  // recovered_value_1 = get_value(&sampled_array_1, bitwidth, expwidth, &special_encodings);
-  // recovered_value_2 = get_value(&sampled_array_2, bitwidth, expwidth, &special_encodings);
-  // sampled_array_3 = fp_divide(&sampled_array_1, &sampled_array_2, expwidth, &special_encodings);
-  // recovered_value_3 = get_value(&sampled_array_3, bitwidth, expwidth, &special_encodings);
-
-  // println!("");
-  // println!("________");
-  // println!("FP DIVISION (needs some more quality control)");
-  // println!("sampled vector 1 {:?}", sampled_array_1);
-  // println!("sampled vector 2 {:?}", sampled_array_2);
-  // println!("operation: fp_divide");
-  // println!("returned vector: {:?}", sampled_array_3);
-  // println!("");
-  // println!("{} / {} = {}", recovered_value_1, recovered_value_2, recovered_value_3);
-  // println!("");
-
-
-
-
-
-
-  // // fp_compare
-
-  // *********
-  // => appears to be bug present associated with
-  // integer divide with different size registers
-  // (I think takes place after matching basis)
-  // need to dig in when get a chance
-  // *********
-
-  // let tolerance:Vec<bool> = vec![false, false, false, false, true, false, false, true];
+  // fp_match_precision
+  for i in 0..1000 {
   
-  // sampled_array_1 = sample_bool_array(bitwidth);
-  // sampled_array_2 = sample_bool_array(bitwidth);
-  // sampled_array_3 = sample_bool_array(bitwidth); // tolerance
-  // recovered_value_1 = get_value(&sampled_array_1, bitwidth, expwidth, &special_encodings);
-  // recovered_value_2 = get_value(&sampled_array_2, bitwidth, expwidth, &special_encodings);
-  // returned_bool = fp_compare(&sampled_array_1, &sampled_array_2, &tolerance, expwidth, expwidth, expwidth, &special_encodings);
-
-
-  // println!("");
-  // println!("________");
-  // println!("FP COMPARE");
-  // println!("sampled vector 1 {:?}", sampled_array_1);
-  // println!("sampled vector 2 {:?}", sampled_array_2);
-  // println!("operation: fp_greaterthan");
-  // println!("returned bool: {}", returned_bool);
-  // println!("");
-  // println!("{} == {} = {}", recovered_value_1, recovered_value_2, returned_bool);
-  // println!("");
+    let mut expwidth_1 = 2;
+    let mut bitwidth_1 = bitwidth;
   
-// fn fp_compare(vector_one:&Vec<bool>, vector_two:&Vec<bool>, tolerance:&Vec<bool>, expwidth_one:u8, expwidth_two:u8, expwidth_tol:u8, special_encodings:&SpecialEncodings) -> bool 
+    sampled_array_1 = sample_bool_array(bitwidth_1);
+    
+    let mut expwidth_2 = 3;
+    let mut bitwidth_2 = bitwidth + 2;
   
-
-
-  // // fp_FMA
-  // sampled_array_1 = sample_bool_array(bitwidth);
-  // sampled_array_2 = sample_bool_array(bitwidth);
-  // sampled_array_3 = sample_bool_array(bitwidth);
-  // recovered_value_1 = get_value(&sampled_array_1, bitwidth, expwidth, &special_encodings);
-  // recovered_value_2 = get_value(&sampled_array_2, bitwidth, expwidth, &special_encodings);
-  // returned_bool = fp_FMA(&sampled_array_1, &sampled_array_2, &sampled_array_3, expwidth, expwidth, &special_encodings);
-
-
-  // fn fp_FMA(vector_one:&Vec<bool>, vector_two:&Vec<bool>, scale_onetwo:&Vec<bool>, vector_three:&Vec<bool>, expwidth_onetwo:u8, expwidth_three:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
+    sampled_array_2 = sample_bool_array(bitwidth_2);
   
+  
+    recovered_value_1 = get_value(&sampled_array_1, expwidth_1, &special_encodings);
+    // recovered_value_2 = get_value(&sampled_array_2, expwidth_2, &special_encodings);
+    // returned_bool = fp_compare(&sampled_array_1, &sampled_array_2, &tolerance, expwidth, expwidth, expwidth, &special_encodings);
 
-  println!("_______________");
-  println!("");
-  println!("Additional operations implemented, pending further quality control:");
-  println!("");
-  println!("- fp_multiply");
-  println!("- fp_divide");
-  println!("- fp_compare");
-  println!("- fp_match_precision");
-  println!("- nearest or stochastic rounding");
-  println!("- fp_match_FMA");
-  println!("- fp_match_dot");
-  println!("- posits format conversions");
-  println!("- special encodings support for some of operations pending");
-  println!("- special encodings support for mixed precision operations pending");
-  println!("- flags / saturation output for fp overflow / underflow pending");
-  println!(" ");
+    println!("");
+    println!("________");
+    println!("FP MATCH PRECISION");
+    println!("sampled vector 1 {:?}", sampled_array_1);
+    println!("expwidth_1 = {}, bitwidth_1 = {}", expwidth_1, bitwidth_1);
+    // println!("sampled vector 2 {:?}", sampled_array_2);
+    println!("expwidth_2 = {}, bitwidth_2 = {}", expwidth_2, bitwidth_2);
+    println!("operation: fp_match_precision");
+
+  //  // fp_match_precision(vector_input:&Vec<bool>, expwidth_one:u8, bitwidth_two:u8, expwidth_two:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
+
+    sampled_array_3 = fp_match_precision(&sampled_array_1, expwidth_1, bitwidth_2, expwidth_2, &special_encodings);
+    // recovered_value_3 = get_value(&sampled_array_3, expwidth, &special_encodings);
+    recovered_value_3 = get_value(&sampled_array_3, expwidth_2, &special_encodings);
+
+    println!("");
+    println!("returned vector: {:?}", sampled_array_3);
+    println!("returned vector length: {}", sampled_array_3.len());
+    reverted_vector = get_value(&sampled_array_3, expwidth_2, &special_encodings);
+    println!("reverted vector: {}", reverted_vector);
+    println!("input value = {}", recovered_value_1);
+    println!("output value = {}", reverted_vector);
+    println!("");
+
+    
+    if recovered_value_1 != reverted_vector && recovered_value_1==recovered_value_1 && reverted_vector==reverted_vector {
+      break
+    }
+
+    break
+    
+  }
+
+
+
+  for i in 0..1000 {
+  
+    // fp_FMA
+    sampled_array_1 = sample_bool_array(bitwidth);
+    sampled_array_2 = sample_bool_array(bitwidth);
+    
+    sampled_array_3 = sample_bool_array(bitwidth);
+  
+    let mut expwidth_3 = expwidth + 1;
+
+    let mut f32_checkresult:f32;
+  
+  
+    // sampled_array_1 = vec![true, false, true, true, true, true, true, false];
+    // sampled_array_2 = vec![true, true, true, true, true, true, false, true];
+    
+    // sampled_array_3 = vec![false, false, false, false, true, false, false, true];
+    
+    
+    recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+    recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
+    recovered_value_3 = get_value(&sampled_array_3, expwidth_3, &special_encodings);
+  
+    recovered_value_1 = get_value(&sampled_array_1, expwidth, &special_encodings);
+    recovered_value_2 = get_value(&sampled_array_2, expwidth, &special_encodings);
+    recovered_value_3 = get_value(&sampled_array_3, expwidth_3, &special_encodings);
+  
+    
+    println!("");
+    println!("________");
+    println!("FP FMA");
+    println!("");
+    println!("fp_FMA");
+    println!("");
+    println!("sampled vector 1 {:?}", sampled_array_1);
+    println!("sampled vector 2 {:?}", sampled_array_2);
+    println!("sampled vector 3 {:?}", sampled_array_3);
+    println!("");
+    println!("value 1 {:?}", recovered_value_1);
+    println!("value 2 {:?}", recovered_value_2);
+    println!("value 3 {:?}", recovered_value_3);
+    println!("");
+
+    f32_checkresult = (recovered_value_1 * recovered_value_2) + recovered_value_3;
+
+    println!("f32: three += one * two = {}", f32_checkresult);
+  
+    (sampled_array_3, expwidth_3) = fp_FMA(&sampled_array_1, &sampled_array_2, &sampled_array_3, expwidth, expwidth_3, &special_encodings);
+  
+    recovered_value_3 = get_value(&sampled_array_3, expwidth_3, &special_encodings);
+  
+    println!("");
+    println!("returned sampled vector 3 {:?}", sampled_array_3);
+    println!("returned expwidth_3 {}", expwidth_3);
+    println!("");
+    println!("value 3 {:?}", recovered_value_3);
+
+    if f32_checkresult != recovered_value_3 && f32_checkresult==f32_checkresult && recovered_value_3==recovered_value_3 {
+      break
+    }
+
+    break
+    
+  }
+
+
+  
+  for i in 0..1000 {
+  
+    // fp_dot
+    sampled_array_1 = sample_bool_array(bitwidth * 3);
+    sampled_array_2 = sample_bool_array(bitwidth * 3);
+    
+    sampled_array_3 = sample_bool_array(bitwidth);
+
+
+    // sampled_array_1 = vec![false, false, false, false, false, true, true, false, false, true, false, true, true, false, true, false, false, true, true, false, true, true, false, false];
+    // sampled_array_2 = vec![true, true, false, false, false, false, false, true, false, true, false, true, true, true, false, true, false, false, true, false, true, false, true, false];
+    
+    // sampled_array_3 = vec![true, false, false, false, false, true, true, false];
+    
+
+  
+    let mut expwidth_3 = expwidth + 1;
+
+    let mut f32_checkresult:f32;
+
+    recovered_value_3 = get_value(&sampled_array_3, expwidth_3, &special_encodings);
+
+    let mut sampled_entry_1_1:Vec<bool> = (sampled_array_1[0..(bitwidth as usize)]).to_vec();
+    let mut sampled_entry_1_2:Vec<bool> = (sampled_array_1[(bitwidth as usize)..(2 * bitwidth as usize)]).to_vec();
+    let mut sampled_entry_1_3:Vec<bool> = (sampled_array_1[(2 * bitwidth as usize)..(3 * bitwidth as usize)]).to_vec();
+
+    let mut recovered_value_1_1 = get_value(&sampled_entry_1_1, expwidth, &special_encodings);
+    let mut recovered_value_1_2 = get_value(&sampled_entry_1_2, expwidth, &special_encodings);
+    let mut recovered_value_1_3 = get_value(&sampled_entry_1_3, expwidth, &special_encodings);
+
+    let mut sampled_entry_2_1:Vec<bool> = (sampled_array_2[0..bitwidth as usize]).to_vec();
+    let mut sampled_entry_2_2:Vec<bool> = (sampled_array_2[(bitwidth as usize)..(2 * bitwidth as usize)]).to_vec();
+    let mut sampled_entry_2_3:Vec<bool> = (sampled_array_2[(2 * bitwidth as usize)..(3 * bitwidth as usize)]).to_vec();
+    
+    let mut recovered_value_2_1 = get_value(&sampled_entry_2_1, expwidth, &special_encodings);
+    let mut recovered_value_2_2 = get_value(&sampled_entry_2_2, expwidth, &special_encodings);
+    let mut recovered_value_2_3 = get_value(&sampled_entry_2_3, expwidth, &special_encodings);
+
+    let mut dot_output:Vec<bool>;
+    let mut dot_expwidth_output:u8;
+    let mut f32_dot_checkvalue:f32;
+
+    f32_dot_checkvalue = 
+      recovered_value_3 +
+      recovered_value_1_1 * recovered_value_2_1 +
+      recovered_value_1_2 * recovered_value_2_2 +
+      recovered_value_1_3 * recovered_value_2_3;
+
+    (dot_output, dot_expwidth_output) = fp_dot(&sampled_array_1, &sampled_array_2, bitwidth, &sampled_array_3, expwidth, expwidth_3, &special_encodings);
+
+    println!("");
+    println!("________");
+    println!("FP DOT");
+    println!("");
+    println!("fp_dot");
+    println!("");
+    println!("sampled_array_1 = {:?}", sampled_array_1);
+    println!("sampled_array_2 = {:?}", sampled_array_2);
+    println!("sampled_array_3 = {:?}", sampled_array_3);
+    println!("");
+    println!("{} + {} * {} + {} * {} + {} * {} = {}", 
+      recovered_value_3,
+      recovered_value_1_1,
+      recovered_value_2_1,
+      recovered_value_1_2,
+      recovered_value_2_2,
+      recovered_value_1_3,
+      recovered_value_2_3,
+      recovered_value_3 +
+      recovered_value_1_1 * recovered_value_2_1 +
+      recovered_value_1_2 * recovered_value_2_2 +
+      recovered_value_1_3 * recovered_value_2_3
+      );
+
+    (dot_output, dot_expwidth_output) = fp_dot(&sampled_array_1, &sampled_array_2, bitwidth, &sampled_array_3, expwidth, expwidth_3, &special_encodings);
+
+    let mut recovered_dot_output = get_value(&dot_output, dot_expwidth_output, &special_encodings);
+
+    println!("recovered_dot_output = {}", recovered_dot_output);
+    
+    println!("f32_dot_checkvalue = {}", f32_dot_checkvalue);
+    // println!("");
+    // println!("value 1 {:?}", recovered_value_1);
+    // println!("value 2 {:?}", recovered_value_2);
+    // println!("value 3 {:?}", recovered_value_3);
+    println!("");
+
+
+    if f32_dot_checkvalue != recovered_dot_output && f32_dot_checkvalue==f32_dot_checkvalue && recovered_dot_output==recovered_dot_output {
+      break
+    }
+
+
+    break
+    
+  }
+
   
 }
 
-// // ___________________________________________________________
-// // *** [0] Benchmarking Functions ***
-// // following intended as extensions:
-// // - compare information retention for a specific float
-// // - derive aggregate metric for information retention in set of sampled floats
-// // - information retention comparisons between alternate encoding types
-// // - generate scatter plot of all encodings
-// // - identify a model approximate distribution based on densities of an encoding type
-// // - derive signal to noise ratio for encoding type in comparison to a target distribution
 
 
 // // ___________________________________________________________
@@ -1056,12 +1603,12 @@ fn get_max_value(bitwidth:u8, expwidth:u8, special_encodings:&SpecialEncodings) 
   //sign will be zero for max value
   max_vector[0] = false;
 
-  let max_value = get_value(&max_vector, bitwidth, expwidth, &special_encodings);
+  let max_value = get_value(&max_vector, expwidth, &special_encodings);
 
   return max_value;
 }
 
-fn get_value(sampled_array : &Vec<bool>, bitwidth:u8, expwidth:u8, special_encodings:&SpecialEncodings) -> f32 {
+fn get_value(sampled_array : &Vec<bool>, expwidth:u8, special_encodings:&SpecialEncodings) -> f32 {
   // this derives a value for an encoded vector
   // follows basic 754 conventions with configurable bitwidth and exponent width
   // note that currently implemented without special values as a starting point
@@ -1072,6 +1619,8 @@ fn get_value(sampled_array : &Vec<bool>, bitwidth:u8, expwidth:u8, special_encod
   if check_special_value_result != 1.0f32 {
     return check_special_value_result;
   }
+
+  let bitwidth:u8 = sampled_array.len() as u8;
 
   //derived values
   let max_exp:i8 = (u32::pow(2, expwidth as u32 -1) - 1) as i8;
@@ -1740,7 +2289,7 @@ fn get_all_values(sampled_array : &Vec<bool>, bitwidth:u8, expwidth:u8, special_
     let slice:Vec<bool> = (&sampled_array[start..stop]).to_vec();
 
     let value:f32 = if convention == "754" {
-      let value:f32 = get_value(&slice, bitwidth, expwidth, &special_encodings);
+      let value:f32 = get_value(&slice, expwidth, &special_encodings);
       value
     // } else if convention == "posits" {
     } else {
@@ -1776,7 +2325,7 @@ fn validate_all_values(all_values:&Vec<f32>, bitwidth:u8, expwidth:u8, special_e
     
     let entry_encoding:Vec<bool> = encode_float(entry_value.clone() as f64, bitwidth, expwidth, &special_encodings);
 
-    let reverted_value:f32 = get_value(&entry_encoding, bitwidth, expwidth, &special_encodings);
+    let reverted_value:f32 = get_value(&entry_encoding, expwidth, &special_encodings);
     // // _____end scenario A_____
 
     // // _____scenario B_____
@@ -1784,11 +2333,11 @@ fn validate_all_values(all_values:&Vec<f32>, bitwidth:u8, expwidth:u8, special_e
     
     // let entry_encoding_0:Vec<bool> = encode_float(entry_value.clone() as f64, bitwidth, expwidth, &special_encodings);
 
-    // let reverted_value_0:f32 = get_value(&entry_encoding_0, bitwidth, expwidth, &special_encodings);
+    // let reverted_value_0:f32 = get_value(&entry_encoding_0, expwidth, &special_encodings);
 
     // let entry_encoding:Vec<bool> = encode_float(reverted_value_0.clone() as f64, bitwidth, expwidth, &special_encodings);
 
-    // let reverted_value:f32 = get_value(&entry_encoding, bitwidth, expwidth, &special_encodings);
+    // let reverted_value:f32 = get_value(&entry_encoding, expwidth, &special_encodings);
     // // _____end scenario B_____
     
 
@@ -2048,6 +2597,9 @@ fn bitwise_leftshift(vector_one:&Vec<bool>) -> Vec<bool> {
   // for now will return a newly populated vector
   // an alternate form may apply inplace conversion to one of the vectors for efficiency
 
+  // for now assuming a leading temp bit may have been inserted eternally
+  // if desired to avoid loss of precision
+
   let mut output_vector:Vec<bool> = vec![];
   for entry in vector_one[1..].iter() {
     output_vector.push(*entry);
@@ -2075,7 +2627,11 @@ fn bitwise_rightshift(vector_one:&Vec<bool>) -> Vec<bool> {
   // for now will return a newly populated vector
   // an alternate form may apply inplace conversion to one of the vectors for efficiency
 
-  // &&& do we need to pad left side?
+  // note that this pads left side
+  // so that returned length is same
+  // assumes that if desired
+  // a trailing null bit may have been inserted externally
+  // if desired to retain precision
 
   let mut output_vector:Vec<bool> = vec![false];
   let vector_one_length = vector_one.len() - 1;
@@ -2163,9 +2719,107 @@ fn integer_add(vector_one:&Vec<bool>, vector_two:&Vec<bool>) -> Vec<bool> {
   }
 }
 
+fn integer_add_extended(vector_one:&Vec<bool>, vector_two:&Vec<bool>, append_leading_bits:bool, assumed_leading_bit:bool, rightside_aligned:bool) -> Vec<bool> {
+  // the base integer_add assumes consistent width and doesn't accomodate overflow
+  // this function extends integer_add to include following options:
+
+  // append_leading_bits: when true, append two leading bits to each vector to prevent overflow
+  // assumed_leading_bit: when true, assumes second of the leading bits for append_leading_bits is activated (as would be the case for mantissa)
+  // automatically extends length for matched vector widths
+  // rightside_aligned: if vectors are different lengths, if rightside_aligned pad false on left of shorter vector, else pad false on right
+  // (for use with mantissas we can assume leftside alligned, note that append_leading_bits takes place after padding)
+
+  // once those options are incorporated
+  // we can pass to the base integer_add function
+
+  let vector_one_len = vector_one.len() as u8;
+  let vector_two_len = vector_two.len() as u8;  
+
+  if !append_leading_bits {
+
+    if vector_one_len == vector_two_len {
+      return integer_add(&vector_one, &vector_two);
+      
+    } else {
+
+      let mut max_len:u8 = vector_one_len;
+      if vector_two_len > vector_one_len {
+        max_len = vector_two_len;
+      }
+
+      return integer_add(
+        &(vector_padout(&vector_one, max_len, rightside_aligned)), 
+        &(vector_padout(&vector_two, max_len, rightside_aligned))
+      );
+    }
+  } else {
+    // else append_leading_bits is true
+    let mut leading_bits:Vec<bool> = vec![false, assumed_leading_bit];
+
+    if vector_one_len == vector_two_len {
+      
+      return integer_add(
+        &(vec![(*leading_bits).to_vec(), vector_one.to_vec()].concat()), 
+        &(vec![leading_bits, vector_two.to_vec()].concat())
+      );
+      
+    } else {
+      // else vectors are diferent lengths
+      // add concat of leading btis with padded out vector
+
+      let mut max_len:u8 = vector_one_len;
+      if vector_two_len > vector_one_len {
+        max_len = vector_two_len;
+      }
+      
+      return integer_add(
+        &(vec![(*leading_bits).to_vec(), 
+vector_padout(&vector_one, max_len, rightside_aligned)].concat()),
+        &(vec![leading_bits, 
+vector_padout(&vector_two, max_len, rightside_aligned)].concat())
+      );
+    }
+  }
+
+  fn vector_padout(input_vector:&Vec<bool>, max_len:u8, rightside_aligned:bool) -> Vec<bool> {
+    // accepts a single vector input
+    // a vector of u8's representing adjacent vector lengths
+    // and a rightside_alighned bool indicating whether padding should be applied on left or right side
+    // pads out the vector with null entries to match the max length found in len_vec
+    // (note that we can expect for mantissa case that rightside_aligned is false)
+    // (note that leading overflow bits handled superately in integer-add)
+
+    let input_vector_len:u8 = input_vector.len() as u8;
+
+    if (input_vector_len as u8) < max_len {
+      // perform padout
+
+      let pad_vec:Vec<bool> = vec![false; (max_len - input_vector_len) as usize];
+
+      if rightside_aligned {
+
+        return vec![pad_vec, input_vector.to_vec()].concat();
+        
+      } else {
+
+        return vec![input_vector.to_vec(), pad_vec].concat();
+        
+      }
+
+    } else {
+
+      return input_vector.to_vec();
+      
+    }
+  }
+}
+
 fn integer_increment(vector_input:&Vec<bool>) -> Vec<bool> {
   // treats input as an integer encoding
   // and increments by one
+
+  // doesn't currently detect overflow in increment operation
+  // pending further thought
 
   let mut one_value:Vec<bool> = vec![false; vector_input.len() - 1];
 
@@ -2258,37 +2912,147 @@ fn integer_greaterthan(vector_one:&Vec<bool>, vector_two:&Vec<bool>) -> bool {
 }
 
 
+// fn integer_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>) -> Vec<bool> {
+//   // applies integer division 
+//   // assumes equivalent length inputs
+//   // assumes unsigned integer encoding in form 2^x+...2^2+2^1+2^0
+//   // (returns integer floor)
+//   // vector_one divided by vector_two
+//   // there might be a more elegant way to do this with e.g. bit shifts and whatnot
+//   // this works as a starting point
+//   // (a future extension may apply something inspired by mantissa_multiply)
+
+//   if integer_greaterthan(&vector_one, &vector_two) && vector_two.contains(&true) {
+
+//     let mut increment_vector:Vec<bool> = vec![false; vector_one.len() as usize];
+//     increment_vector[vector_one.len() as usize - 1] = true;
+
+//     // println!("in integer divide");
+//     // println!("increment_vector {:?}", increment_vector);
+//     // println!("vector_one {:?}", vector_one);
+//     // println!("vector_two {:?}", vector_two);
+//     // println!("");
+    
+    
+//     return integer_add( &increment_vector, &integer_divide( &integer_subtract(&vector_one, &vector_two), &vector_two));
+
+//   } else {
+
+//     return vec![false; vector_one.len() as usize];
+    
+//   }
+
+// }
+
+
+
 fn integer_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>) -> Vec<bool> {
-  // applies integer division 
-  // assumes equivalent length inputs
-  // assumes unsigned integer encoding in form 2^x+...2^2+2^1+2^0
-  // (returns integer floor)
-  // vector_one divided by vector_two
-  // there might be a more elegant way to do this with e.g. bit shifts and whatnot
-  // this works as a starting point
-  // (a future extension may apply something inspired by mantissa_multiply)
 
-  if integer_greaterthan(&vector_one, &vector_two) && vector_two.contains(&true) {
+  let vector_one_len = vector_one.len();
 
-    let mut increment_vector:Vec<bool> = vec![false; vector_one.len() as usize];
-    increment_vector[vector_one.len() as usize - 1] = true;
-
-    // println!("in integer divide");
-    // println!("increment_vector {:?}", increment_vector);
-    // println!("vector_one {:?}", vector_one);
-    // println!("vector_two {:?}", vector_two);
-    // println!("");
-    
-    
-    return integer_add( &increment_vector, &integer_divide( &integer_subtract(&vector_one, &vector_two), &vector_two));
-
-  } else {
-
-    return vec![false; vector_one.len() as usize];
-    
+  if integer_greaterthan(&vector_two, &vector_one) && vector_two != vector_one {
+    // if two > one return zero
+    return vec![false; vector_one_len];
   }
 
+  // initialize support variables
+  let mut output_vector:Vec<bool> = vec![false; vector_one_len];
+  let mut leftshit_count:u8 = 1;
+
+  let mut subtracted_vector_one:Vec<bool> = vector_one.clone();
+  let mut shifted_vector_two:Vec<bool> = vector_two.clone();
+
+  let mut increment_vector:Vec<bool> = vec![false; vector_one_len - 1];
+  increment_vector.push(true);
+
+  // we'll start by preparing support variables
+  // such as to work our way from most to least significant bits
+  for i in 0..vector_one.len() {
+
+    let pre_shift_check_vec:Vec<bool> = bitwise_leftshift(&shifted_vector_two);
+
+    if integer_greaterthan(&pre_shift_check_vec, &shifted_vector_two) && integer_greaterthan(&vector_one, &pre_shift_check_vec) {
+
+      shifted_vector_two = pre_shift_check_vec.clone();
+      leftshit_count += 1;
+
+      increment_vector = bitwise_leftshift(&increment_vector);
+
+    } else {
+      break
+    }
+
+  }
+
+  // now that we have support variables initialized
+  // we can start preparing the output_vec
+  // 
+  for i in 0..leftshit_count {
+
+    if integer_greaterthan(&subtracted_vector_one, &shifted_vector_two) {
+
+      output_vector = integer_add(&output_vector, &increment_vector);
+
+      subtracted_vector_one = integer_subtract(&subtracted_vector_one, &shifted_vector_two);
+
+    }
+
+    shifted_vector_two = bitwise_rightshift(&shifted_vector_two);
+
+    increment_vector = bitwise_rightshift(&increment_vector);
+
+    // if !increment_vector.contains(&true) {
+    //   break
+    // }
+
+  }
+  return output_vector;
 }
+
+
+
+
+  
+
+  // let mut increment_vector:Vec<bool> = vec![false; vector_one.len() - 1];
+  // increment_vector.push(true);
+
+
+  // let mut vector_one_clone:Vec<bool> = vector_one.clone();
+  // let mut vector_two_clone:Vec<bool> = vector_two.clone();
+
+  // let vector_one_len = vector_one.len();
+
+  // for i in 0..vector_one_len {
+
+  //   let j = vector_one_len - 1 - i;
+
+  //   if vector_two_clone.contains(&true) && output_vec.contains(&false) {
+
+  //     let mut check_vector = vec![false; vector_one_len];
+  //     check_vector[j] = true;
+
+  //     if vector_two[j] && integer_greaterthan(&vector_one_clone, &check_vector) {
+  
+  //       output_vec = integer_add(&output_vec, &increment_vector);
+
+  //       vector_one_clone = integer_subtract(&vector_one_clone, &check_vector);
+        
+  //     }
+
+  //     increment_vector = bitwise_leftshift(&increment_vector);
+
+  //     vector_two_clone = bitwise_leftshift(&vector_two_clone);
+
+  //   } else {
+  //     break
+  //   }
+
+  // }
+
+//   return output_vec;
+// }
+
 
 fn validate_bitwise_and_integer_operations() {
   // ok want to run some experiments on operations conventions
@@ -2590,10 +3354,10 @@ fn validate_bitwise_and_integer_operations() {
   println!("");
 
   // validate fp_add
-  let recovered_value_1 = get_value(&encoding_3, 8, expwidth, &special_encodings);
-  let recovered_value_2 = get_value(&encoding_5, 8, expwidth, &special_encodings);
+  let recovered_value_1 = get_value(&encoding_3, expwidth, &special_encodings);
+  let recovered_value_2 = get_value(&encoding_5, expwidth, &special_encodings);
   let result_fp_add:Vec<bool> = fp_add(&encoding_3, &encoding_5, expwidth, &special_encodings);
-  let recovered_value_3 = get_value(&result_fp_add, result_fp_add.len() as u8, expwidth, &special_encodings);
+  let recovered_value_3 = get_value(&result_fp_add, expwidth, &special_encodings);
   println!("");
   println!("{:?}", encoding_3);
   println!("{:?}", encoding_5);
@@ -2605,10 +3369,10 @@ fn validate_bitwise_and_integer_operations() {
   println!("{}", recovered_value_3);
 
   // validate fp_add2
-  let recovered_value_a = get_value(&encoding_1, 8, expwidth, &special_encodings);
-  let recovered_value_b = get_value(&encoding_2, 8, expwidth, &special_encodings);
+  let recovered_value_a = get_value(&encoding_1, expwidth, &special_encodings);
+  let recovered_value_b = get_value(&encoding_2, expwidth, &special_encodings);
   let result_fp_add2:Vec<bool> = fp_add(&encoding_1, &encoding_2, expwidth, &special_encodings);
-  let recovered_value_c = get_value(&result_fp_add2, result_fp_add2.len() as u8, expwidth, &special_encodings);
+  let recovered_value_c = get_value(&result_fp_add2, expwidth, &special_encodings);
   println!("");
   println!("{:?}", encoding_1);
   println!("{:?}", encoding_2);
@@ -2620,10 +3384,10 @@ fn validate_bitwise_and_integer_operations() {
   println!("{}", recovered_value_c);
 
   // validate fp_subtract
-  let recovered_value_1_fp_subtract = get_value(&encoding_3, 8, expwidth, &special_encodings);
-  let recovered_value_2_fp_subtract = get_value(&encoding_5, 8, expwidth, &special_encodings);
+  let recovered_value_1_fp_subtract = get_value(&encoding_3, expwidth, &special_encodings);
+  let recovered_value_2_fp_subtract = get_value(&encoding_5, expwidth, &special_encodings);
   let result_fp_subtract:Vec<bool> = fp_subtract(&encoding_3, &encoding_5, expwidth, &special_encodings);
-  let recovered_value_3_fp_subtract = get_value(&result_fp_subtract, result_fp_subtract.len() as u8, expwidth, &special_encodings);
+  let recovered_value_3_fp_subtract = get_value(&result_fp_subtract, expwidth, &special_encodings);
   println!("");
   println!("{:?}", encoding_3);
   println!("{:?}", encoding_5);
@@ -2635,10 +3399,10 @@ fn validate_bitwise_and_integer_operations() {
   println!("{}", recovered_value_3_fp_subtract);
 
   // validate fp_subtract2
-  let recovered_value_a_fp_subtract = get_value(&encoding_1, 8, expwidth, &special_encodings);
-  let recovered_value_b_fp_subtract = get_value(&encoding_2, 8, expwidth, &special_encodings);
+  let recovered_value_a_fp_subtract = get_value(&encoding_1, expwidth, &special_encodings);
+  let recovered_value_b_fp_subtract = get_value(&encoding_2, expwidth, &special_encodings);
   let result_fp_add2_fp_subtract:Vec<bool> = fp_subtract(&encoding_1, &encoding_2, expwidth, &special_encodings);
-  let recovered_value_c_fp_subtract = get_value(&result_fp_add2_fp_subtract, result_fp_add2_fp_subtract.len() as u8, expwidth, &special_encodings);
+  let recovered_value_c_fp_subtract = get_value(&result_fp_add2_fp_subtract, expwidth, &special_encodings);
   println!("");
   println!("{:?}", encoding_1);
   println!("{:?}", encoding_2);
@@ -2687,10 +3451,10 @@ println!("inf times nan {}", inf_value * nan_value);
   // println!("1 dividedby inf {}", 1./value1);
 
   // validate fp_multiply
-  let recovered_value_a_fp_multiply = get_value(&encoding_8, 8, expwidth, &special_encodings);
-  let recovered_value_b_fp_multiply = get_value(&encoding_2, 8, expwidth, &special_encodings);
+  let recovered_value_a_fp_multiply = get_value(&encoding_8, expwidth, &special_encodings);
+  let recovered_value_b_fp_multiply = get_value(&encoding_2, expwidth, &special_encodings);
   let result_fp_add2_fp_multiply:Vec<bool> = fp_multiply(&encoding_8, &encoding_2, expwidth, &special_encodings);
-  let recovered_value_c_fp_multiply = get_value(&result_fp_add2_fp_multiply.to_vec(), result_fp_add2_fp_multiply.len() as u8, expwidth, &special_encodings);
+  let recovered_value_c_fp_multiply = get_value(&result_fp_add2_fp_multiply.to_vec(), expwidth, &special_encodings);
   println!("");
   println!("{:?}", encoding_8);
   println!("{:?}", encoding_2);
@@ -2720,10 +3484,10 @@ println!("inf times nan {}", inf_value * nan_value);
 
 
   // // validate fp_multiply2
-  // let recovered_value_a_fp_multiply2 = get_value(&encoding_2, 8, expwidth, &special_encodings);
-  // let recovered_value_b_fp_multiply2 = get_value(&encoding_2, 8, expwidth, &special_encodings);
+  // let recovered_value_a_fp_multiply2 = get_value(&encoding_2, expwidth, &special_encodings);
+  // let recovered_value_b_fp_multiply2 = get_value(&encoding_2, expwidth, &special_encodings);
   // let result_fp_add2_fp_multiply2:Vec<bool> = fp_multiply(&encoding_2, &encoding_2, expwidth, &special_encodings);
-  // let recovered_value_c_fp_multiply2 = get_value(&result_fp_add2_fp_multiply2, result_fp_add2_fp_multiply2.len() as u8, expwidth, &special_encodings);
+  // let recovered_value_c_fp_multiply2 = get_value(&result_fp_add2_fp_multiply2, expwidth, &special_encodings);
   // println!("");
   // println!("{:?}", encoding_2);
   // println!("{:?}", encoding_2);
@@ -2779,10 +3543,10 @@ println!("inf times nan {}", inf_value * nan_value);
 
 
   // // validate fp_divide
-  // let recovered_value_a_fp_divide = get_value(&encoding_2, 8, expwidth, &special_encodings);
-  // let recovered_value_b_fp_divide = get_value(&encoding_1, 8, expwidth, &special_encodings);
+  // let recovered_value_a_fp_divide = get_value(&encoding_2, expwidth, &special_encodings);
+  // let recovered_value_b_fp_divide = get_value(&encoding_1, expwidth, &special_encodings);
   // let result_fp_add2_fp_divide:Vec<bool> = fp_divide(&encoding_2, &encoding_1, expwidth, &special_encodings);
-  // let recovered_value_c_fp_divide = get_value(&result_fp_add2_fp_divide, result_fp_add2_fp_divide.len() as u8, expwidth, &special_encodings);
+  // let recovered_value_c_fp_divide = get_value(&result_fp_add2_fp_divide, expwidth, &special_encodings);
   // println!("");
   // println!("{:?}", encoding_2);
   // println!("{:?}", encoding_1);
@@ -2794,10 +3558,10 @@ println!("inf times nan {}", inf_value * nan_value);
   // println!("{}", recovered_value_c_fp_divide);
 
   // validate fp_divide
-  let recovered_value_a_fp_divide = get_value(&encoding_1, 8, expwidth, &special_encodings);
-  let recovered_value_b_fp_divide = get_value(&encoding_2, 8, expwidth, &special_encodings);
+  let recovered_value_a_fp_divide = get_value(&encoding_1, expwidth, &special_encodings);
+  let recovered_value_b_fp_divide = get_value(&encoding_2, expwidth, &special_encodings);
   let result_fp_add2_fp_divide:Vec<bool> = fp_divide(&encoding_1, &encoding_2, expwidth, &special_encodings);
-  let recovered_value_c_fp_divide = get_value(&result_fp_add2_fp_divide, result_fp_add2_fp_divide.len() as u8, expwidth, &special_encodings);
+  let recovered_value_c_fp_divide = get_value(&result_fp_add2_fp_divide, expwidth, &special_encodings);
   println!("");
   println!("{:?}", encoding_1);
   println!("{:?}", encoding_2);
@@ -2814,12 +3578,214 @@ println!("inf times nan {}", inf_value * nan_value);
 // ______________________________________
 // *** [7] floating point operations ***
 // fp_add(.) returns without rounding, same expwidth basis
+// fp_add_variable_exp(.) - returns without rounding, variable expwidth basis 
 // fp_subtract(.) - (a wrapper for fp_add)
 // mantissa_multiply(.) - support function for fp_multiply
 // fp_multiply(.)
 // fp_divide(.)
 // fp_greaterthan(.)
 // further basics pending
+
+fn fp_add_variable_exp(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_encodings:&SpecialEncodings) -> (Vec<bool>, u8) {
+  // performs an fp_add on vectors one and two
+  // and if the output is a saturation value
+  // expands the exponent register and tries again
+  // in order for this to work in context of special encodings
+  // we'll need to inspect for encodings prior to calling fp_add
+  // this also differs from fp_add in that 
+  // it returns a tuple with second entry the resulting exp_width
+
+  // when adding two numbers number_one >> 0 and number_two << 0
+  // there will often be a rounding applied even in conditions of expanded exponent
+  // as the returned value often won’t have capacity for lowest decimal values
+  // trying o figure out how to incorporate stochastic rounding into this scenario
+  // right now our stochastic rounding is primarily associated with updates to precision
+  // (in the fp_match_precision function)
+  // Such that when decreasing the size of a mantissa, the reduced bits are removed and lowest register either rounds up or down
+  // One way to do this would be prior to the addition
+  // Add rounding support bits to the mantissa
+  // And then round them off after the addition
+  // Tabling this for a future extension
+
+
+  // _____________
+
+  // first check or special encodings
+  // in manner consistent with fp_add
+  // with expection that we have to return a tuple
+
+
+  // ok first we'll check inputs for special encodings
+  // we'll have following conventions:
+  // if either input is NaN, output is NaN
+  // if INF plus NEG_INF, output is NaN
+  // if INF plus INF, output is INF
+  // if NEG_INF plus NEG_INF, output is NEG_INF
+  // anything + (zero or negzero) = input 
+  // zero + negzero = zero
+  // negzero + negzero = negzero
+
+  let special_value_result_one:f32 = special_encodings.check_for_reserved_encoding(vector_one);
+
+  let special_value_result_two:f32 = special_encodings.check_for_reserved_encoding(vector_two);
+
+  // if either fp is a special value, walk through scenarios
+  // (when values aren't special encodings returned as 1.0f32)
+  if !(special_value_result_one == 1.0f32 && special_value_result_two == 1.0f32) {
+
+    // if either input is NaN, output is NaN
+    if f32::is_nan(special_value_result_one) || f32::is_nan(special_value_result_two) {
+      return ((*special_encodings.nan).to_vec(), expwidth);
+    } else if special_value_result_one == f32::INFINITY {
+      // if INF plus NEG_INF, output is NaN
+      // if INF plus INF, output is INF
+      // if NEG_INF plus NEG_INF, output is NEG_INF
+      if special_value_result_two == f32::INFINITY {
+        return ((*special_encodings.infinity).to_vec(), expwidth);
+      } else if special_value_result_two == f32::NEG_INFINITY {
+        return ((*special_encodings.nan).to_vec(), expwidth);
+      } else {
+        return ((*special_encodings.infinity).to_vec(), expwidth);
+      }
+      
+    } else if special_value_result_one == f32::NEG_INFINITY {
+      // if INF plus NEG_INF, output is NaN
+      // if INF plus INF, output is INF
+      // if NEG_INF plus NEG_INF, output is NEG_INF
+      if special_value_result_two == f32::NEG_INFINITY {
+        return ((*special_encodings.neginfinity).to_vec(), expwidth);
+      } else if special_value_result_two == f32::INFINITY {
+        return ((*special_encodings.nan).to_vec(), expwidth);
+      } else {
+        return ((*special_encodings.neginfinity).to_vec(), expwidth);
+      }
+
+    } else if special_value_result_two == f32::INFINITY {
+      // if INF plus NEG_INF, output is NaN
+      // if INF plus INF, output is INF
+      // if NEG_INF plus NEG_INF, output is NEG_INF
+      if special_value_result_one == f32::INFINITY {
+        return ((*special_encodings.infinity).to_vec(), expwidth);
+      } else if special_value_result_one == f32::NEG_INFINITY {
+        return ((*special_encodings.nan).to_vec(), expwidth);
+      } else {
+        return ((*special_encodings.infinity).to_vec(), expwidth);
+      }
+
+    } else if special_value_result_two == f32::NEG_INFINITY {
+      // if INF plus NEG_INF, output is NaN
+      // if INF plus INF, output is INF
+      // if NEG_INF plus NEG_INF, output is NEG_INF
+      if special_value_result_one == f32::NEG_INFINITY {
+        return ((*special_encodings.neginfinity).to_vec(), expwidth);
+      } else if special_value_result_one == f32::INFINITY {
+        return ((*special_encodings.nan).to_vec(), expwidth);
+      } else {
+        return ((*special_encodings.neginfinity).to_vec(), expwidth);
+      }
+
+
+      
+    } else if (special_value_result_one == -0.) && (special_value_result_two == -0.) {
+      return ((*special_encodings.negzero).to_vec(), expwidth);
+    } else if (special_value_result_one == 0. || special_value_result_one == -0.) && (special_value_result_two == 0. || special_value_result_two == -0.) {
+      return ((*special_encodings.zero).to_vec(), expwidth);
+    } else if special_value_result_one == 0. || special_value_result_one == -0. {
+        return (vector_two.to_vec(), expwidth);
+    }  else if special_value_result_two == 0. || special_value_result_two == -0. {
+        return (vector_one.to_vec(), expwidth);
+    }
+  }
+  // ___________
+
+  // great now can call fp_add
+  let returned_vec:Vec<bool> = fp_add(vector_one, vector_two, expwidth, special_encodings);
+
+  let mut is_not_saturated:bool = true;
+
+  if !returned_vec[1..].contains(&false) || !returned_vec[1..].contains(&true) {
+    
+    is_not_saturated = false;
+    
+  }
+
+  if is_not_saturated {
+
+    return (returned_vec, expwidth);
+
+  } else {
+
+    // initialize expanded exponent register
+    let mut adjusted_exp_one:Vec<bool> = vector_one[1..(expwidth as usize +1)].to_vec();
+
+    let mut adjusted_exp_two:Vec<bool> = vector_two[1..(expwidth as usize +1)].to_vec();
+
+    // derive the expanded form
+    adjusted_exp_one = expand_exp_register(&adjusted_exp_one);
+
+    adjusted_exp_two = expand_exp_register(&adjusted_exp_two);
+
+    // adjusted exponent width is one larger
+    let adusted_exp_width:u8 = expwidth + 1;
+
+    //now aggregate the expanded encodings
+    let adjusted_vector_one:Vec<bool> = vec![vec![vector_one[0]], adjusted_exp_one, vector_one[(1+expwidth as usize)..].to_vec().clone()].concat();
+
+    let adjusted_vector_two:Vec<bool> = vec![vec![vector_two[0]], adjusted_exp_two, vector_two[(1+expwidth as usize)..].to_vec().clone()].concat();
+
+    // now pass those adjustments, which won't be saturated, back to this function
+
+    return fp_add_variable_exp(&adjusted_vector_one, &adjusted_vector_two, adusted_exp_width, &special_encodings)
+ 
+  }
+  
+}
+
+
+fn expand_exp_register(input_exp:&Vec<bool>) -> Vec<bool> {
+  // accepts as input an exponent encoded as bool vector 
+  // per the configurable FP conventions
+  // and returns a corresponding / equal valued vector
+  // adjusted to have an additional exponent register
+  // and corresponding mantissa alignment to retain value
+  // the returned encoding has an exponent width basis of (expwidth + 1)
+
+
+  // when we add the additional exponent register
+  // per FP conventions, that means that there will be a new offset value
+  // so we will need to adjust the exponents accordingly
+  // for example, if increasing exponent width from 4 to 5
+  // the offset would be increased from 7 to 15
+  // 3 to 4 => 3 to 7
+  // 2 to 3 => 1 to 3
+  // in other words, the delta is 2^(expwidth - 1)
+
+  // let orig_offset:u32 = u32::pow(2, (expwidth as u32 - 1)) - 1;
+  // let new_offset:u32 = u32::pow(2, (expwidth as u32)) - 1;
+  // let offset_delta:u32 = new_offset - orig_offset;
+
+  // // this is a littel cheaper
+  // let offset_delta = u32::pow(2, expwidth as u32- 1);
+
+  // so when we increase the offset 
+  // that basically means if considering exp as a raw integer encoding
+  // we need a bigger integer in the exponent
+  // for an equivalent output
+
+  // which in practice basically amounts to adding a leftside register
+  // and then incrementing the resulting next to top register 
+
+  let mut exp_vector:Vec<bool> = input_exp.clone();
+
+  let increment_vector:Vec<bool> = vec![vec![false, true], vec![false; exp_vector.len()-1]].concat();
+
+  exp_vector.insert(0, false);
+
+  // this integer_add doesn't need overflow detection
+  return integer_add(&exp_vector, &increment_vector);
+}
+  
+
 
 fn fp_add(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
   // performs floating point addition
@@ -2829,8 +3795,10 @@ fn fp_add(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_enc
   // such that an external rounding operation may be applied
   // or otherwise populated into a higher precision accumulator
   // special encodings have conventions per the comments below
+  // note that since this may return a different mantissa width
+  // we're operating on premise that recovery of special encodings
+  // would take place with an external rounding operation
 
-  let bitwidth = vector_one.len();
 
   // ___________
 
@@ -2863,6 +3831,8 @@ fn fp_add(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_enc
         return (*special_encodings.infinity).to_vec();
       } else if special_value_result_two == f32::NEG_INFINITY {
         return (*special_encodings.nan).to_vec();
+      } else {
+        return (*special_encodings.infinity).to_vec();
       }
       
     } else if special_value_result_one == f32::NEG_INFINITY {
@@ -2873,7 +3843,36 @@ fn fp_add(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_enc
         return (*special_encodings.neginfinity).to_vec();
       } else if special_value_result_two == f32::INFINITY {
         return (*special_encodings.nan).to_vec();
+      } else {
+        return (*special_encodings.neginfinity).to_vec();
       }
+
+    } else if special_value_result_two == f32::INFINITY {
+      // if INF plus NEG_INF, output is NaN
+      // if INF plus INF, output is INF
+      // if NEG_INF plus NEG_INF, output is NEG_INF
+      if special_value_result_one == f32::INFINITY {
+        return (*special_encodings.infinity).to_vec();
+      } else if special_value_result_one == f32::NEG_INFINITY {
+        return (*special_encodings.nan).to_vec();
+      } else {
+        return (*special_encodings.infinity).to_vec();
+      }
+
+    } else if special_value_result_two == f32::NEG_INFINITY {
+      // if INF plus NEG_INF, output is NaN
+      // if INF plus INF, output is INF
+      // if NEG_INF plus NEG_INF, output is NEG_INF
+      if special_value_result_one == f32::NEG_INFINITY {
+        return (*special_encodings.neginfinity).to_vec();
+      } else if special_value_result_one == f32::INFINITY {
+        return (*special_encodings.nan).to_vec();
+      } else {
+        return (*special_encodings.neginfinity).to_vec();
+      }
+
+
+      
     } else if (special_value_result_one == -0.) && (special_value_result_two == -0.) {
       return (*special_encodings.negzero).to_vec();
     } else if (special_value_result_one == 0. || special_value_result_one == -0.) && (special_value_result_two == 0. || special_value_result_two == -0.) {
@@ -2886,236 +3885,795 @@ fn fp_add(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_enc
   }
   // ___________
 
-  // we'll initialize output vector as empty
-  let mut output_vector:Vec<bool> = vec![];
-  // println!("intialized output_vector {:?}", output_vector);
+  // future extension:
+  // since we've already addressed special values
+  // we can pass an empty special_encopdings
+  // to all fo the support functions to speed up a tad
 
-  fn match_exp(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8) -> (Vec<bool>, Vec<bool>) {
-    // returns (mantissa_one, mantissa_two)
-    // with increased rightside entries as needed for matched precision
-    // and with added leading slots for 2^1 and 2^0
-    // returns an adjusted mantissa_two with same exp basis as vector_one
-    // based on convention that exp_one >= exp_two
-    // as may be inspected externally
+  let bitwidth:u8 = vector_one.len() as u8;
 
-    // to perform addition we'll want the same scale exponents
-    let exp_one = &vector_one[1..(expwidth+1) as usize].to_vec();
-    let exp_two = &vector_two[1..(expwidth+1) as usize].to_vec();
-    // println!("intialized exp_one {:?}", exp_one);
-    // println!("intialized exp_two {:?}", exp_two);
+  // ok now let's consider sign scenarios
+  let mut one_positive:bool = !vector_one[0];
+  let mut two_positive:bool = !vector_two[0];
   
-    let mut mantissa_one:Vec<bool> = (*&vector_one[(expwidth+1) as usize..]).to_vec();
-    let mut mantissa_two:Vec<bool> = (*&vector_two[(expwidth+1) as usize..]).to_vec();
+  let mut output_sign_vec:Vec<bool> = vec![false]; //initialize false for positive
 
-    // the configurable FP8 format assumes a leading 2^0
-    // we will add that for purposes of addition
-    mantissa_one.insert(0, true);
-    mantissa_two.insert(0, true);
-    // mantissa_two.insert(0, false);
+  // i know is silly to have two variables here
+  // reason is because the test is for >=
+  let mut abs_one_greaterthan_abs_two:bool = true; // intiialize
+  let mut abs_two_greaterthan_abs_one:bool = true; // intiialize
 
-    //and will have convention of an additional leading 2^1
-    // to support cases of e.g. 1.5+1.5 = 2^1+2^0
-    mantissa_one.insert(0, false);
-    mantissa_two.insert(0, false);
+  let mut returned_exp:Vec<bool> = vec![];
+  let mut returned_mantissa:Vec<bool> = vec![];
 
-    let exp_delta = integer_subtract(exp_one, exp_two);
+  let exp_vector_one:Vec<bool> = vector_one[1..(expwidth+1) as usize].to_vec();
+  let exp_vector_two:Vec<bool> = vector_two[1..(expwidth+1) as usize].to_vec();
 
-    if exp_delta.contains(&true) {
-      // exp delta tells us how many right shifts of mantissa_two are needed
-      let mut shift_count = integer_convert(&exp_delta);
+  let mantissa_vector_one:Vec<bool> = vector_one[(expwidth+1) as usize..].to_vec();
+  let mantissa_vector_two:Vec<bool> = vector_two[(expwidth+1) as usize..].to_vec();  
+  
+  if one_positive && two_positive {
+    // both values positive case
 
-      // println!("shift_count **** = {}", shift_count);
+    // println!("qwer");
 
-      // shift_count = (shift_count as f32).log2() as u32; // experiment
+    // output_sign_vec[0] = false; // already initialized for positive
 
-      // we'll pad the two mantissas on the right with this count prior to shifting
-      for i in 0..shift_count {
-        
-        mantissa_one.push(false);
-        mantissa_two.push(false);
-      }
+    (returned_exp, returned_mantissa) = mantissa_add_with_exp_align(&exp_vector_one, &exp_vector_two, &mantissa_vector_one, &mantissa_vector_two, bitwidth);
 
-      // now apply the rightshift to mantissa_two
-      for i in 0..shift_count {
-        // in case the ADD function used in some form of recursion
-        // will apply the shifts without inplace
-        // I suspect otherwise the inplace version might be slightly more efficient
-        // bitwise_rightshift_inplace(&mut mantissa_two);
-        mantissa_two = bitwise_rightshift(&mantissa_two);
-      }
+  } else if !one_positive && !two_positive {
+    // both values negative case
+
+    output_sign_vec[0] = true; // negative case
+
+    (returned_exp, returned_mantissa) = mantissa_add_with_exp_align(&exp_vector_one, &exp_vector_two, &mantissa_vector_one, &mantissa_vector_two, bitwidth);
+    
+  } else if one_positive && !two_positive {
+    // one positive two negative case
+
+    // println!("1111");
+
+    // get abs of vector_one and vector_two
+    let abs_vector_one = fp_abs(&vector_one, &special_encodings);
+    let abs_vector_two = fp_abs(&vector_two, &special_encodings);
+
+    // get output sign based on whether vector_one >= vector_two
+    abs_one_greaterthan_abs_two = fp_greaterthan(&abs_vector_one, &abs_vector_two, expwidth, &special_encodings);
+
+    // println!("abs_one_greaterthan_abs_two = {}", abs_one_greaterthan_abs_two);
+
+    if abs_one_greaterthan_abs_two {
+
+      // output_sign_vec[0] = false; // already initialized for positive value
+
+      (returned_exp, returned_mantissa) = mantissa_subtract_with_exp_align(&exp_vector_one, &exp_vector_two, &mantissa_vector_one, &mantissa_vector_two, bitwidth);
+      
+    } else {
+
+      output_sign_vec[0] = true; // negative value
+
+      (returned_exp, returned_mantissa) = mantissa_subtract_with_exp_align(&exp_vector_two, &exp_vector_one, &mantissa_vector_two, &mantissa_vector_one, bitwidth);
       
     }
+    
+  } else if !one_positive && two_positive {
+
+    // println!("!one_positive && two_positive");
+    
+    // get abs of vector_one and vector_two
+    let abs_vector_one = fp_abs(&vector_one, &special_encodings);
+    let abs_vector_two = fp_abs(&vector_two, &special_encodings);
+
+    // println!("abs_vector_one {:?}", abs_vector_one);
+    // println!("abs_vector_two {:?}", abs_vector_two);
+
+    // get output sign based on whether vector_two >= vector_one
+    abs_two_greaterthan_abs_one = fp_greaterthan(&abs_vector_two, &abs_vector_one, expwidth, &special_encodings);
+
+    if abs_two_greaterthan_abs_one {
+
+      // output_sign_vec[0] = false; // already initialized for positive value
+      // println!("abs_two_greaterthan_abs_one, {}", abs_two_greaterthan_abs_one);
+
+      // println!("this is the greater then lesser vector in subtraction:");
+      // println!("{:?}", exp_vector_two);
+      // println!("{:?}", exp_vector_one);
+      // println!("mantissa_vector_two {:?}", mantissa_vector_two);
+      // println!("mantissa_vector_one {:?}", mantissa_vector_one);
+      // println!("");
+      
+
+      (returned_exp, returned_mantissa) = mantissa_subtract_with_exp_align(&exp_vector_two, &exp_vector_one, &mantissa_vector_two, &mantissa_vector_one, bitwidth);
+      
+    } else {
+
+      output_sign_vec[0] = true; // negative value
+
+      (returned_exp, returned_mantissa) = mantissa_subtract_with_exp_align(&exp_vector_one, &exp_vector_two, &mantissa_vector_one, &mantissa_vector_two, bitwidth);
+      
+    }
+  }
+
+  // if there are any trailing nulls beyond the original bitwidth
+  // go ahead and strike
+  let returned_mantissa_len:usize = returned_mantissa.len();
+  // let extra_bits_count:usize = vector_one.len() - expwidth as usize - 1 - returned_mantissa_len;
+  let mut delta_mantissa_len:usize = 0;
+  let orig_mantissa_len:usize = vector_one.len() - expwidth as usize - 1;
+  let mut extra_bits_count:u8 = 0;
+  if returned_mantissa_len > orig_mantissa_len {
+    delta_mantissa_len = returned_mantissa_len - orig_mantissa_len;
+
+    for i in 0..delta_mantissa_len {
+      if !returned_mantissa[returned_mantissa_len - 1 -i] {
+        
+        extra_bits_count += 1;
+
+      } else {
+        break
+      }
+    }
+    
+  }
+
+  // print!("extra_bits_count = {}", extra_bits_count);
+
+  if extra_bits_count > 0 {
+    let reduced_mantissa_len:usize = returned_mantissa_len - extra_bits_count as usize;
+
+    returned_mantissa = returned_mantissa[..reduced_mantissa_len].to_vec();
+
+  }
+  
+  // for i in 0..extra_bits_count {
+
+  //   if !returned_mantissa[returned_mantissa_len - 1 - i] {
+  //     returned_mantissa.remove(returned_mantissa_len - 1 - i);
+  //   }
+  // }
+  
+
+  // let returned_vector:Vec<bool> = vec![output_sign_vec, returned_exp, returned_mantissa].concat();
+  
+  // // //assume rounding conducted externally
+  // // // return the concatinated encoding
+  // return returned_vector;
+
+  return vec![output_sign_vec, returned_exp, returned_mantissa].concat();
+}
+
+// fn match_exp(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8) -> (Vec<bool>, Vec<bool>) {
+
+fn match_exp(input_mantissa_vector_one:&Vec<bool>, input_mantissa_vector_two:&Vec<bool>, input_exp_vector_one:&Vec<bool>, input_exp_vector_two:&Vec<bool>) -> (Vec<bool>, Vec<bool>) {
+  // returns (mantissa_one, mantissa_two)
+  // with increased rightside entries as needed for matched precision
+  // and with added leading slots for 2^1 and 2^0
+  // returns an adjusted mantissa_two with same exp basis as vector_one
+  // based on convention that exp_one >= exp_two
+  // as may be inspected externally
+
+  // let mut exp_one:Vec<bool> = vec![];
+  // let mut exp_two:Vec<bool> = vec![];
+
+  // let mut mantissa_one:Vec<bool> = vec![];
+  // let mut mantissa_two:Vec<bool> = vec![];
+
+  let mut exp_one:Vec<bool>;
+  let mut exp_two:Vec<bool>;
+
+  let mut mantissa_one:Vec<bool>;
+  let mut mantissa_two:Vec<bool>;
+
+  // let mut saturation_flag:bool = false;
+
+  // intialize into variables one and two
+  // based on max exp of input one and two
+  // (such that if exp_two > exp_one, etc)
+  if integer_greaterthan(&input_exp_vector_one, &input_exp_vector_two) {
+
+    // to perform addition we'll want the same scale exponents
+    exp_one = input_exp_vector_one.clone();
+    exp_two = input_exp_vector_two.clone();
+    // println!("intialized exp_one {:?}", exp_one);
+    // println!("intialized exp_two {:?}", exp_two);
+
+    // saturation_flag = !input_exp_vector_one.contains(&false);
+
+    mantissa_one = input_mantissa_vector_one.clone();
+    mantissa_two = input_mantissa_vector_two.clone();
+    
+  } else {
+
+    // to perform addition we'll want the same scale exponents
+    exp_one = input_exp_vector_two.clone();
+    exp_two = input_exp_vector_one.clone();
+    // println!("intialized exp_one {:?}", exp_one);
+    // println!("intialized exp_two {:?}", exp_two);
+
+    // saturation_flag = !input_exp_vector_two.contains(&false);
+
+    mantissa_one = input_mantissa_vector_two.clone();
+    mantissa_two = input_mantissa_vector_one.clone();
+    
+  }
+
+  // the configurable FP8 format assumes a leading 2^0
+  // we will add that for purposes of addition
+  mantissa_one.insert(0, true);
+  mantissa_two.insert(0, true);
+  // mantissa_two.insert(0, false);
+
+  //and will have convention of an additional leading 2^1
+  // to support cases of e.g. 1.5+1.5 = 2^1+2^0
+  mantissa_one.insert(0, false);
+  mantissa_two.insert(0, false);
+
+  let exp_delta = integer_subtract(&exp_one, &exp_two);
+
+  // println!("exp_delta = {:?}", exp_delta);
+  // println!("before matched precision");
+  // println!("mantissa_one = {:?}", mantissa_one);
+  // println!("mantissa_two = {:?}", mantissa_two);
+  // println!("");
+
+  if exp_delta.contains(&true) {
+    // exp delta tells us how many right shifts of mantissa_two are needed
+    let mut shift_count = integer_convert(&exp_delta);
+
+    // println!("shift_count **** = {}", shift_count);
+
+    // shift_count = (shift_count as f32).log2() as u32; // experiment
+
+    // we'll pad the two mantissas on the right with this count prior to shifting
+    for i in 0..shift_count {
+      
+      mantissa_one.push(false);
+      mantissa_two.push(false);
+    }
+
+    // now apply the rightshift to mantissa_two
+    for i in 0..shift_count {
+      // in case the ADD function used in some form of recursion
+      // will apply the shifts without inplace
+      // I suspect otherwise the inplace version might be slightly more efficient
+      // bitwise_rightshift_inplace(&mut mantissa_two);
+      mantissa_two = bitwise_rightshift(&mantissa_two);
+    }
+    
+  } 
+  
+  // I thought about testing for saturation conditions here
+  // think it would be more appropriate in mantissa_add_with_exp_align
+  // } else if saturation_flag {
+    
+    // !exp_one.contains(&false) {
+    
+    // if mantissa_one.contains(&true) || mantissa_two.contains(&true) {
+    //   // this is the overflow scenario
+    //   // return saturation
+
+    //   println!("asdfdsasa 1234");
+
+    //   mantissa_one = vec![vec![false, true], vec![true; input_mantissa_vector_two.len()]].concat();
+
+    //   mantissa_two = mantissa_one.clone();
+      
+    // }
+  // }
+
+  println!("after matched precision");
+  println!("mantissa_one = {:?}", mantissa_one);
+  println!("mantissa_two = {:?}", mantissa_two);
+  println!("");
 
   // println!("mantissa_one");
   // println!("{:?}", mantissa_one);
   // println!("mantissa_two");
   // println!("{:?}", mantissa_two);
-    
-  return (mantissa_one, mantissa_two);  
-  }
-
-  let mut mantissa_one:Vec<bool> = vec![];
-  let mut mantissa_two:Vec<bool> = vec![];
-  let mut one_greaterthan_two:bool = false;
   
-  // here we'll bifuracte based on which has largest exponent
-  if integer_greaterthan(&vector_one[1..(expwidth+1) as usize].to_vec(), &vector_two[1..(expwidth+1) as usize].to_vec()) {
+  return (mantissa_one, mantissa_two);  
+}
 
-    (mantissa_one, mantissa_two) = match_exp(&vector_one, &vector_two, expwidth);
+fn mantissa_add_with_exp_align(exp_vector_one:&Vec<bool>, exp_vector_two:&Vec<bool>, mantissa_vector_one:&Vec<bool>, mantissa_vector_two:&Vec<bool>, bitwidth:u8) -> (Vec<bool>, Vec<bool>) {
+  // takes input of potentially misaligned exponent vectors
+  // and corresponding mantissa vectors
+  // aligns the exponents with adjustment to one of the mantissas
+  // inserts a leading 01 register to the mantissas
+  // performs vector addition
+  // then passes the resulting exponent and mantissa to added_mantissa_exp_align to readjust the mantissa within scale of exponent
+  // returns the output from added_mantissa_exp_align
 
-    one_greaterthan_two = true;
+  // currently saturation detection for addition takes place in either added_mantissa_exp_align or mantissa_add_with_exp_align
+  // (where the former is called within the latter)
+  // based on cases where an exponenent is to be incremented 
+  // and it already contains all activated registers
+  // when detected, the saturation_flag marker is set to true
+  // and the returned tuples are provided with full activations 
+  // in both exp and mantissa register
+
+  // a future extension might simplify this function
+  // by integration of integer_add_extended
+  // which is kind of redundant with some of this scope
+  // this function extends by also performing
+  // correspondign adjustments to the exponent
+
+  // let mut aligned_mantissa_one:Vec<bool> = vec![];
+  // let mut aligned_mantissa_two:Vec<bool> = vec![];
+  // let mut returned_mantissa:Vec<bool> = vec![];
+  // let mut returned_exp:Vec<bool> = vec![];
+
+  let mut aligned_mantissa_one:Vec<bool>;
+  let mut aligned_mantissa_two:Vec<bool>;
+  let mut returned_mantissa:Vec<bool>;
+  let mut returned_exp:Vec<bool>;
+
+  let mut saturation_flag:bool = false;
+
+  // find largest exponent and align mantissas
+  // note that match_exp includes inserting the leading 01 regisers
+  if integer_greaterthan(&exp_vector_one, &exp_vector_two) {
+
+    // println!("qwer2");
     
-    // note that if exponents were same we need to confirm largest value
-    if &vector_one[1..(expwidth+1) as usize] == &vector_two[1..(expwidth+1) as usize] {
+    let mut basis_exp:Vec<bool> = exp_vector_one.clone();
+    
+    (aligned_mantissa_one, aligned_mantissa_two) = match_exp(&mantissa_vector_one, &mantissa_vector_two, exp_vector_one, exp_vector_two);
 
-      if !integer_greaterthan(&vector_one[(expwidth+1) as usize ..].to_vec(), &vector_two[(expwidth+1) as usize ..].to_vec()) {
-        one_greaterthan_two = false;
+    // println!("aligned_mantissa_one==mantissa_vector_one = {}", &aligned_mantissa_one==mantissa_vector_one);
+    // println!("aligned_mantissa_two==mantissa_vector_two = {}", &aligned_mantissa_two==mantissa_vector_two);
+
+    // now perform addition to the mantissas
+    returned_mantissa = integer_add(&aligned_mantissa_one, &aligned_mantissa_two);
+
+    // println!("returned_mantissa after integer_add = {:?}", returned_mantissa);
+    // println!("aligned_mantissa_one after integer_add = {:?}", aligned_mantissa_one);
+    
+    // if !integer_greaterthan(&returned_mantissa[2..].to_vec(), &aligned_mantissa_one[2..].to_vec()) {
+
+    if !integer_greaterthan(&returned_mantissa, &aligned_mantissa_one) {
+      // if returned mantissa is less than either of the inputs
+      // it means an overflow bit needs to be added to the exponent
+      if basis_exp.contains(&false) {
+        basis_exp = integer_increment(&basis_exp);  
+      } else {
+        saturation_flag = true;
       }
       
-    }
 
-  } else {
-
-    (mantissa_two, mantissa_one) = match_exp(&vector_two, &vector_one, expwidth);
-    
-  }
-
-  // println!("after match exponent");
-  // println!("mantissa_one {:?}", mantissa_one);
-  // println!("mantissa_two {:?}", mantissa_two);
-  // println!("");
-
-  let mut mantissa_sum:Vec<bool> = vec![];
-  let mut returned_sign:bool = false; // false is the positive sign case
-  
-  // now the summation of mantissas is based on sign bits
-  if !vector_one[0] && !vector_two[0] {
-    // both positive case
-    mantissa_sum = integer_add(&mantissa_one, &mantissa_two);
-    
-  } else if !vector_one[0] && vector_two[0] {
-    // vector_one positive vector_two negative case
-    mantissa_sum = integer_subtract(&mantissa_one, &mantissa_two);
-
-    if !one_greaterthan_two {
-      returned_sign = true;
-    }
-    
-  } else if vector_one[0] && !vector_two[0] {
-    // vector_one negative vector_two positive case
-    mantissa_sum = integer_subtract(&mantissa_two, &mantissa_one);
-
-    if one_greaterthan_two {
-      returned_sign = true;
-    }
-
-  } else {
-    // both negative case
-    mantissa_sum = integer_add(&mantissa_one, &mantissa_two);
-
-    returned_sign = true;
-  }
-
-  // println!("mantissa_sum = {:?}", mantissa_sum);
-  // println!("");
-
-  // add output sign bit to output vector
-  output_vector.push(returned_sign);
-
-  // now will dervie our output exponent
-  let mut output_exp:Vec<bool> = vec![];
-  
-  if one_greaterthan_two {
-    for i in 1..(expwidth+1) {
-      output_exp.push(vector_one[i as usize]);
-    }
-  } else{
-    for i in 1..(expwidth+1) {
-      output_exp.push(vector_two[i as usize]);
-    }
-  }
-
-  // println!("output_exp before adjust = ");
-  // println!("{:?}", output_exp);
-  // println!("mantissa_sum before adjust = ");
-  // println!("{:?}", mantissa_sum);
-  // println!("");
-
-  // ok output exponent might need to be tweaked based on addition stuff
-  // the mantissa currently includes a 2^1 and 2^0 register
-  // the default basis is assumed 01 for these two registers
-  // the workflow to adjust is if leading mantissa !=01 and != 1*
-  // while leading mantissa !=01, leftshift(mantissa), exponent-=1
-  // else if leading mantissa == 1*, rightshift(mantissa), exponent+=1
-  
-  if mantissa_sum.contains(&true) {
-    if !mantissa_sum[0] && !mantissa_sum[1] {
-      // this is the 00 case
-
-      // first find how many leftshifts are needed
-      let mut leftshift_count = 0;
-      let mantissa_sum_copy = mantissa_sum.clone();
+      // since performing a rightshift will pad right side
+      // to retain precision
+      returned_mantissa.push(false);
       
-      for entry in mantissa_sum_copy[1..].iter() {
+      returned_mantissa = bitwise_rightshift(&returned_mantissa);
+      
+    }
+  
+    // last step is to readjust exponent and mantissas
+    // based on outcome of integer operation
+    
+    // returns tuple (returned_exp, returned_mantissa)
+    return added_mantissa_exp_align(&basis_exp, &returned_mantissa, bitwidth);
+
+  } else {
+
+    // println!("asdfasdf");
+
+    let mut basis_exp:Vec<bool> = exp_vector_two.clone();
+
+    (aligned_mantissa_two, aligned_mantissa_one) = match_exp(&mantissa_vector_two, &mantissa_vector_one, exp_vector_two, exp_vector_one);
+    
+    // now perform addition to the mantissas
+    returned_mantissa = integer_add(&aligned_mantissa_one, &aligned_mantissa_two);
+
+    if !integer_greaterthan(&returned_mantissa[2..].to_vec(), &aligned_mantissa_one[2..].to_vec()) {
+      // if returned mantissa is less than either of the inputs
+      // it means an overflow bit needs to be added to the exponent
+
+      if basis_exp.contains(&false) {
+        basis_exp = integer_increment(&basis_exp);  
+      } else {
+        saturation_flag = true;
+      }
+
+      // since performing a rightshift will pad right side
+      // to retain precision
+      returned_mantissa.push(false);
+      returned_mantissa = bitwise_rightshift(&returned_mantissa);
+    }
+  
+    // last step is to readjust exponent and mantissas
+    // based on outcome of integer operation
+
+    // println!("saturation_flag = {}", saturation_flag);
+
+    if !saturation_flag {
+      // returns tuple (returned_exp, returned_mantissa)
+      return added_mantissa_exp_align(&basis_exp, &returned_mantissa, bitwidth);
+    } else {
+      // else for overflow conditions return saturaiton
+      let basis_exp_len = basis_exp.len();
+
+      // *a variation could add additional exponent registers here
+      
+      return (basis_exp, vec![true; (bitwidth as usize - basis_exp_len)]);
+    }
+  }
+}
+
+fn mantissa_subtract_with_exp_align(exp_vector_one:&Vec<bool>, exp_vector_two:&Vec<bool>, mantissa_vector_one:&Vec<bool>, mantissa_vector_two:&Vec<bool>, bitwidth:u8) -> (Vec<bool>, Vec<bool>) {
+  // resembles mantissa_add_with_exp_align
+  // however in this case order matters
+  // so we assume form of vector_one - vector_two
+  // and we assume that fp_one > fp_two
+  // (and if fp_two > fp_one we assume it was addressed external to this function)
+  // returns the output from subtracted_mantissa_exp_align
+
+  // let mut aligned_mantissa_one:Vec<bool> = vec![];
+  // let mut aligned_mantissa_two:Vec<bool> = vec![];
+  // let mut returned_mantissa:Vec<bool> = vec![];
+  // let mut returned_exp:Vec<bool> = vec![];
+
+  let mut aligned_mantissa_one:Vec<bool>;
+  let mut aligned_mantissa_two:Vec<bool>;
+  let mut returned_mantissa:Vec<bool>;
+  let mut returned_exp:Vec<bool>;
+
+  // align mantissas
+  // note that match_exp includes inserting the leading 01 regisers
+  // note that this assumes that fp_one >= fp_two validated externally
+
+  (aligned_mantissa_one, aligned_mantissa_two) = match_exp(&mantissa_vector_one, &mantissa_vector_two, exp_vector_one, exp_vector_two);
+
+
+  // now perform subtraction to the mantissas
+  returned_mantissa = integer_subtract(&aligned_mantissa_one, &aligned_mantissa_two);
+
+  // println!("returned_mantissa after integer subtract {:?}", returned_mantissa);
+  // println!("");
+
+  // // since we subtracted away the assumed register
+  // // need to decrement exponent
+  // let adjusted_exp:Vec<bool> = integer_decrement(&exp_vector_one);
+
+  // last step is to readjust exponent and mantissas
+  // based on outcome of integer operation
+  
+  // returns tuple (returned_exp, returned_mantissa)
+  return subtracted_mantissa_exp_align(exp_vector_one, &returned_mantissa, bitwidth);
+
+}
+
+fn added_mantissa_exp_align(exp_vector:&Vec<bool>, mantissa_vector:&Vec<bool>, bitwidth:u8) -> (Vec<bool>, Vec<bool>) {
+  // ok so the mantissa leading bit scenarios are {01, 00, 10, 11}
+  // the context of this application is that we have an exponent register and a mantissa register
+  // where the mantissa was derived from addition of preceding pair of mantissas of aligned exponent scale per exp_vector
+  // using integer_add
+  // and where we want to output a tuple of (exp, mantissa)
+  // which were first adjusted to have mantissa config 01***_
+  // by way of exponent increments / mantissa left shifts
+  // or by way of exponenht decrements / mantissa rigth shifts
+  // followed by dropping the first two mantissa registers
+  // the preceding addition operation we assumed had mantissa inputs of 01***_
+  // such that we know that the maximum was 11***_ without overflwo
+  // **** we'll have convention that in cases of maxed out exponent, we halt the leftshift adjustments
+  // and in cases of underflow in exponent, we return underflow saturation value
+  // when performing mantissa right shifts we'll add a register
+  // and when performing mantissa left shifts we'll retain same width (since we don't know original mantissa width herein)
+  // the scenarios are:
+  // 00 - if true in mantissa, mantissa leftshift / exponent increment until 01***, then drop leading two registers in mantissa. 
+  // 01 - no adjustment, drop leading two mantissa registers
+  // 10 or 11 - one mantissa rightshift, exponent decrement, drop two leading mantissa registers
+
+  // currently saturation detection for addition takes place in either added_mantissa_exp_align or mantissa_add_with_exp_align
+  // (where the former is called within the latter)
+  // based on cases where an exponenent is to be incremented 
+  // and it already contains all activated registers
+  // when detected, the saturation_flag marker is set to true
+  // and the returned tuples are provided with full activations 
+  // in both exp and mantissa register
+
+  // cool here it goes
+
+  let mut saturation_flag:bool = false;
+
+  let mut returned_exp:Vec<bool> = exp_vector.clone();
+  let mut returned_mantissa:Vec<bool> = mantissa_vector.clone();
+
+  // println!("mantissa_vector passed to added_exp_align");
+  // println!("{:?}", mantissa_vector);
+  // println!("exp_vector passed to added_exp_align");
+  // println!("{:?}", exp_vector);
+  // println!();
+
+  
+  if !mantissa_vector[0] && mantissa_vector[1] {
+    // 01 - no adjustment, drop leading two mantissa registers
+
+    returned_mantissa.remove(0);
+    returned_mantissa.remove(0);
+
+    return (returned_exp, returned_mantissa);
+    
+  } else if !mantissa_vector[0] && !mantissa_vector[1] {
+    // 00 - if true in mantissa, mantissa leftshift / exponent increment until 01***, then drop leading two registers in mantissa.
+
+    // if returned_mantissa.contains(&true) {
+
+    let non_mantissa_bit_count = (returned_exp.len() + 1 - 2) as u8;
+    let minimum_bit_count = bitwidth - non_mantissa_bit_count;
+
+    let mut shiftcount:u8 = 0; 
+
+    if (returned_mantissa[1..]).to_vec().contains(&true) {
+
+      for entry in returned_mantissa[1..].iter() {
         if !entry {
-          // bitwise_leftshift_inplace(&mut mantissa_sum);
-          mantissa_sum = bitwise_leftshift(&mantissa_sum);
-          leftshift_count +=1;
+          shiftcount +=1;
         } else {
           break
         }
       }
-      // now we'll subtract leftshift count from the exponent
-      let leftshift_count_vec:Vec<bool> = integer_revert(&leftshift_count, expwidth);
-
-      // println!("leftshift_count = {}", leftshift_count);
-      // println!("leftshift_count_vec = {:?}", leftshift_count_vec);
-
-      output_exp = integer_subtract(&output_exp, &leftshift_count_vec);
-      
-    } else if mantissa_sum[0] {
-      // this is the 1* case
-      // note that there is an edge case where we lose a bit of precision
-      // when this rightshift drops an activation
-      // so will go ahead and add an extra bit to mantissa
-      mantissa_sum.push(false);
-      
-      // bitwise_rightshift_inplace(&mut mantissa_sum);
-      mantissa_sum = bitwise_rightshift(&mantissa_sum);
-      
-      let rightshift_count_vec:Vec<bool> = integer_revert(&1, expwidth);
-
-      // println!("rightshift_count = {}", 1);
-      // println!("rightshift_count_vec = {:?}", rightshift_count_vec);
-      
-      
-      output_exp = integer_add(&output_exp, &rightshift_count_vec);
     }
-  }
+    
+    for _i in 0..shiftcount {
+      // this is better than using a while loop
+        
+      if !returned_exp.contains(&false) {
+        saturation_flag = true;
+        
+        // if exponent already maxed out, return overflow scenario
+        // this is probably the reserved inf encoding
+        returned_mantissa = vec![true; returned_mantissa.len()];
+  
+        return (returned_exp, returned_mantissa);
+        
+      } else if returned_mantissa.len() as u8 <= minimum_bit_count {
 
-  // println!("output_exp after adjust = ");
-  // println!("{:?}", output_exp);
-  // println!("mantissa_sum after adjust = ");
-  // println!("{:?}", mantissa_sum);
-  // println!("");
+        // if mantissa width <= original mantissa width, etc
+        returned_mantissa.push(false);
+        
+      }
 
-  // add the exponent bits to the output vector
-  for i in 0..expwidth {
-    output_vector.push(output_exp[i as usize]);
-  }
+      
 
-  // finally can add the returned mantissa bits to the output vector
+      returned_mantissa.push(false);
+      
+      returned_mantissa = bitwise_leftshift(&returned_mantissa);
 
-  // ok now can remove the two leading entries to mantissa_sum
-  // rust notes that "pop_front" might be more efficient
-  mantissa_sum.remove(0);
-  mantissa_sum.remove(0);
+      returned_mantissa.remove(returned_mantissa.len() - 1);
 
-  for entry in mantissa_sum {
-    output_vector.push(entry);
+      returned_exp = integer_increment(&returned_exp);
+      
+    }
+
+    // // ok if after the for loop we still don't have a leading 01 in mantissa
+    // // we'll go ahead and decrement the exponent
+    // if !returned_mantissa[1] {
+
+      
+      
+    //   returned_exp = integer_decrement(&returned_exp);
+    // }      
+      
+    // }
+
+    // now drop leading zeros
+    returned_mantissa.remove(0);
+    returned_mantissa.remove(0);
+
+    return (returned_exp, returned_mantissa);
+
+  } else {
+    //if returned_mantissa[0] {
+    // 10 or 11 - one mantissa rightshift, exponent decrement, drop two leading mantissa registers
+
+    // println!("returned_exp {:?}", returned_exp);
+
+    if !returned_exp.contains(&false) {
+
+      // if exponent at maximum, return overflow scenario
+      // this is probably the reserved inf encoding
+
+      saturation_flag = true;
+      
+      returned_mantissa = vec![true; returned_mantissa.len()];
+
+      return (returned_exp, returned_mantissa);
+
+    }
+
+    // since performing a rightshift will pad right side
+    // to retain precision
+    returned_mantissa.push(false);
+
+    returned_mantissa = bitwise_rightshift(&returned_mantissa);
+
+    returned_exp = integer_increment(&returned_exp);
+
+    // now drop leading zeros
+    returned_mantissa.remove(0);
+    returned_mantissa.remove(0);
+
+    return (returned_exp, returned_mantissa);
+
   }
   
-  return output_vector;
+}
+
+fn subtracted_mantissa_exp_align(exp_vector:&Vec<bool>, mantissa_vector:&Vec<bool>, bitwidth:u8) -> (Vec<bool>, Vec<bool>) {
+  // resembles added_mantissa_exp_align
+  // for cases where mantissa_vector has leading bits 01 or 00
+  // however treats cases of leading 1* bits differently
+  // since assumes the subtraction had to borrow from exp
+
+  // the scenarios are:
+  // 00 - if true in mantissa, mantissa leftshift / exponent increment until 01***, then drop leading two registers in mantissa. 
+  // 01 - no adjustment, drop leading two mantissa registers
+
+  // ok am not positive, this is the tricky one
+  // 10 or 11 - 1 mantissa rightshift, 2 exponent decrement, drop two leading mantissa registers
+
+  // cool here it goes
+
+  // println!("checkpoitn s1");
+
+  let mut returned_exp:Vec<bool> = exp_vector.clone();
+  let mut returned_mantissa:Vec<bool> = mantissa_vector.clone();
+
+  
+  if !mantissa_vector[0] && mantissa_vector[1] {
+    // 01 - no adjustment, drop leading two mantissa registers
+
+    // println!("checkpoitn s2");
+
+    returned_mantissa.remove(0);
+    returned_mantissa.remove(0);
+
+    return (returned_exp, returned_mantissa);
+    
+  } else if !mantissa_vector[0] && !mantissa_vector[1] {
+    // 00 - if true in mantissa, mantissa leftshift / exponent increment until 01***, then drop leading two registers in mantissa.
+
+    // println!("checkpoitn s3");
+
+    // if returned_mantissa.contains(&true) {
+
+    let non_mantissa_bit_count = (returned_exp.len() + 1) as u8;
+    let minimum_bit_count = bitwidth + 2 - non_mantissa_bit_count;
+
+    // println!("before calculate shiftcount");
+    // println!("returned_mantissa {:?}", returned_mantissa);
+    // println!("returned_mantissa[1..(returned_mantissa.len() - minimum_bit_count as usize + 1)]");
+    // println!("returned_mantissa.len() = {}", returned_mantissa.len());
+    // println!("minimum_bit_count = {}", minimum_bit_count);
+    
+    // println!("(returned_mantissa.len() - minimum_bit_count as usize + 1) = {}", (returned_mantissa.len() - minimum_bit_count as usize + 1));
+    // println!("{:?}", returned_mantissa[1..(returned_mantissa.len() - minimum_bit_count as usize + 1)]);
+    
+    let mut shiftcount:u8 = 0;
+
+    if (returned_mantissa[1..]).to_vec().contains(&true) {
+
+      for entry in returned_mantissa[1..].iter() {
+  
+        // println!("entry = {}", entry);
+        // println!("!entry = {}", !entry);
+          
+  
+      // for entry in returned_mantissa[0..(returned_mantissa.len() - minimum_bit_count as usize)].iter() {
+        
+        if !entry {
+          shiftcount +=1;
+        } else {
+          break
+        }
+      }
+      
+    } else {
+      // else if there wasn't a true in the mantissa
+      // that means we're returning zero
+      // for now we're treating zero as a special encoding
+      // **I am not positive this scales to custom zero encodings
+      // but for now am going to return the underflow saturation value
+
+      returned_mantissa = vec![false; returned_mantissa.len()];
+
+      returned_exp = vec![false; returned_exp.len()];
+
+      return (returned_exp, returned_mantissa);
+      
+    }
+
+    // println!("shiftcount {:?}", shiftcount);
+    
+    for _i in 0..shiftcount { // this is better than using a while loop
+    
+    
+    // while !returned_mantissa[1] {
+        
+      if !returned_exp.contains(&true) {
+
+        // println!("fdasfad");
+        
+        // if exponent already minimum, return underflow scenario
+        // this is probably one of the reserved inf encoding
+        returned_mantissa = vec![false; returned_mantissa.len()];
+  
+        return (returned_exp, returned_mantissa);
+        
+      } 
+      // else if returned_mantissa.len() as u8 > minimum_bit_count {
+
+      // println!("rewqrewq");
+
+      // if mantissa width <= original mantissa width, etc
+      // there's probably a cleaner way to do this than doing the addition every time
+      // returned_mantissa.push(false);
+
+      returned_mantissa.push(false);
+    
+      returned_mantissa = bitwise_leftshift(&returned_mantissa);
+
+      returned_mantissa.remove(returned_mantissa.len()-1);
+
+      // returned_exp = integer_increment(&returned_exp);
+
+      returned_exp = integer_decrement(&returned_exp);
+
+      // }
+      
+    }
+    // println!("checkpoitn s5");
+      // // ok if after the for loop we still don't have a leading 01 in mantissa
+      // // we'll go ahead and decrement the exponent
+      // if !returned_mantissa[1] {
+      //   returned_exp = integer_decrement(&returned_exp);
+      // }
+      
+    // }
+
+    // now drop leading zeros
+    returned_mantissa.remove(0);
+    returned_mantissa.remove(0);
+
+    return (returned_exp, returned_mantissa);
+
+  } else {
+    // if mantissa_vector[0] {
+    // ok am not positive, this is the tricky one
+    // 10 or 11 - 1 mantissa rightshift, 2 exponent decrement, drop two leading mantissa registers
+
+    for i in 0..2 {
+
+      if !returned_exp.contains(&true) {
+        // if exponent at minimum, return underflow scenario
+        // this is probably the reserved negative inf encoding
+  
+        // this is probably the reserved neginf encoding
+        returned_mantissa = vec![false; returned_mantissa.len()];
+  
+        return (returned_exp, returned_mantissa);
+  
+      }
+
+      returned_exp = integer_decrement(&returned_exp);
+
+    }
+
+    // since performing a rightshift will pad right side
+    // to retain precision
+    returned_mantissa.push(false);
+
+    returned_mantissa = bitwise_rightshift(&returned_mantissa);
+
+    // now drop leading zeros
+    returned_mantissa.remove(0);
+    returned_mantissa.remove(0);
+
+    return (returned_exp, returned_mantissa);
+
+  }
+
 }
 
 fn fp_subtract(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
@@ -3124,7 +4682,8 @@ fn fp_subtract(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, specia
   let mut vector_two_subtract = vector_two.clone();
   vector_two_subtract[0] = !vector_two[0];
   
-  let output_vector = fp_add(&vector_one, 
+  
+  let output_vector = fp_add(vector_one, 
                              &vector_two_subtract,
                              expwidth,
                              &special_encodings,
@@ -3192,12 +4751,181 @@ fn mantissa_multiply(vector_one:&Vec<bool>, vector_two:&Vec<bool>) -> Vec<bool> 
   return mantissa_product;
 }
 
+// fn fp_multiply(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
+//   // floating point multiply returning infinite precision
+//   // based on assumption of consistent exponent width basis
+//   // based on extracting sign bit, adding exponents, multiplying mantissas, 
+//   // and then possible adjustment if resulting mantissa >= 2
+
+//   // ___________
+
+//   // ok first we'll check inputs for special encodings
+//   // we'll have following conventions:
+//   // if either input is NaN, output is NaN
+//   // if INF * NEG_INF, output is NEG_INF
+//   // if INF * INF, output is INF
+//   // if NEG_INF * NEG_INF, output is INF
+//   // any value or negzero times zero is zero
+//   // anything else times negzero is negzero
+
+//   let special_value_result_one:f32 = special_encodings.check_for_reserved_encoding(vector_one);
+
+//   let special_value_result_two:f32 = special_encodings.check_for_reserved_encoding(vector_two);
+
+//   // if either fp is a special value, walk through scenarios
+//   // (when values aren't special encodings returned as 1.0f32)
+//   if !(special_value_result_one == 1.0f32 && special_value_result_two == 1.0f32) {
+
+//     // if either input is NaN, output is NaN
+//     if f32::is_nan(special_value_result_one) || f32::is_nan(special_value_result_two) {
+//       return (*special_encodings.nan).to_vec();
+//     } else if special_value_result_one == f32::INFINITY {
+//       // if INF times NEG_INF, output is NEG_INF
+//       // if INF times INF, output is INF
+//       // if NEG_INF times NEG_INF, output is INF
+//       if special_value_result_two == f32::INFINITY {
+//         return (*special_encodings.infinity).to_vec();
+//       } else if special_value_result_two == f32::NEG_INFINITY {
+//         return (*special_encodings.neginfinity).to_vec();
+//       }
+      
+//     } else if special_value_result_one == f32::NEG_INFINITY {
+//       // if INF plus NEG_INF, output is NaN
+//       // if INF plus INF, output is INF
+//       // if NEG_INF plus NEG_INF, output is NEG_INF
+//       if special_value_result_two == f32::NEG_INFINITY {
+//         return (*special_encodings.infinity).to_vec();
+//       } else if special_value_result_two == f32::INFINITY {
+//         return (*special_encodings.neginfinity).to_vec();
+//       }
+//     } else if special_value_result_one == 0. || special_value_result_two == 0. {
+//       return (*special_encodings.zero).to_vec();
+//     } else if special_value_result_one == -0. || special_value_result_two == -0. {
+//       return (*special_encodings.negzero).to_vec();
+//     }
+//   }
+
+//   // ___________
+
+//   // get the returned sign bit
+//   let returned_sign_bit:bool = vector_one[0] ^ vector_two[0]; // (based on XOR)
+
+//   // get the returned exponent
+//   // note that multiply has higher risk of overflow
+//   // for now will just return saturation value, special encodings support pending
+//   let mut returned_exp:Vec<bool> = integer_add(&vector_one[1..(expwidth as usize +1)].to_vec(), &vector_two[1..(expwidth as usize +1)].to_vec());
+
+  
+
+//   // note that if the returned vector is less than inputs
+//   // it signals an exponent overflow scenario
+//   if !integer_greaterthan(&returned_exp, &vector_one[1..(expwidth as usize +1)].to_vec()) || !integer_greaterthan(&returned_exp, &vector_two[1..(expwidth as usize +1)].to_vec()) {
+//     // exponent overflow scenario
+//     // return saturation value
+
+//     println!("exponent overflow scenario");
+
+//     // *****special encoding support for inf/neg_inf/nan pending
+    
+//     let mut returned_overflow_vec:Vec<bool> = vec![];
+
+//     returned_overflow_vec.push(returned_sign_bit);
+
+//     for _i in 0..(vector_one.len() - 1) {
+//       returned_overflow_vec.push(true);
+//     }
+    
+//     return returned_overflow_vec;
+    
+//   }
+
+//   returned_exp = bitwise_rightshift(&returned_exp);
+
+// // fn integer_greaterthan(vector_one:&Vec<bool>, vector_two:&Vec<bool>) -> bool {
+
+
+//   // the *& means we are accessing the values from a slice of a vector 
+//   // wrapped back to a vector by .to_vec()
+//   let mut mantissa_one:Vec<bool> = (*&vector_one[(expwidth as usize +1)..]).to_vec();
+//   let mut mantissa_two:Vec<bool> = (*&vector_two[(expwidth as usize +1)..]).to_vec();
+
+//   let mut mantissa_product:Vec<bool> = mantissa_multiply(&mantissa_one, &mantissa_two);
+
+//   println!("mantissa_one = {:?}", mantissa_one);
+//   println!("mantissa_two = {:?}", mantissa_two);
+//   println!("result of mantissa product is:");
+//   println!("{:?}", mantissa_product);
+
+//   // the returned mantissa includes added 2^1 and 2^0 registers
+//   // we can expect that these registers will 
+//   // either be in configuration of 01 or 10
+//   // (since mantissa were recieved in range 1-1.99..)
+//   // if in 01 configuraiton no adjustment to exponent needed
+//   // if in 10 configuration, we'll add 1 to exponent and rightshift mantissa
+//   if mantissa_product[0] {
+//     let mut exponent_adder:Vec<bool> = vec![false; returned_exp.len()];
+
+//     let exponent_adder_len = exponent_adder.len();
+    
+//     exponent_adder[exponent_adder_len-1] = true;
+
+//     returned_exp = integer_add(&returned_exp, &exponent_adder);
+
+//     // add extra bit to mantissa to retain precision
+//     mantissa_product.push(false);
+
+//     // now perform the rightshift
+//     mantissa_product = bitwise_rightshift(&mantissa_product);
+    
+//   }
+
+//   // now strip the leading registers from mantissa
+//   mantissa_product.remove(0);
+//   mantissa_product.remove(0);
+
+//   // println!("returned_sign_bit = {}", returned_sign_bit);
+//   // println!("returned_exp = {:?}", returned_exp);
+//   // println!("mantissa_product = {:?}", mantissa_product);
+
+//   // great now is just a matter of combining components
+
+//   let mut output_vector:Vec<bool> = vec![];
+  
+//   output_vector.push(returned_sign_bit);
+
+//   for entry in returned_exp.iter() {
+//     output_vector.push(*entry);
+//   }
+
+//   for entry in mantissa_product.iter() {
+//     output_vector.push(*entry);
+//   }
+  
+//   return output_vector;
+// }
+
 fn fp_multiply(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
   // floating point multiply returning infinite precision
   // based on assumption of consistent exponent width basis
   // based on extracting sign bit, adding exponents, multiplying mantissas, 
   // and then possible adjustment if resulting mantissa >= 2
 
+  println!("START fp_multiply");
+  // troubleshoot
+  if vector_one == &vec![false, true, false, true, true, false, true, false] {
+    println!("#######################################");
+    println!("#######################################");
+    println!("#######################################");
+
+    println!("");
+    println!("expwidth = {}", expwidth);
+    println!("vector_one");
+    println!("{:?}", vector_one);
+    println!("vector_two");
+    println!("{:?}", vector_two);
+    println!("");
+  }
+  
   // ___________
 
   // ok first we'll check inputs for special encodings
@@ -3254,29 +4982,110 @@ fn fp_multiply(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, specia
   // get the returned exponent
   // note that multiply has higher risk of overflow
   // for now will just return saturation value, special encodings support pending
-  let mut returned_exp:Vec<bool> = integer_add(&vector_one[1..(expwidth as usize +1)].to_vec(), &vector_two[1..(expwidth as usize +1)].to_vec());
+  // we'll add a leftside padding bit in case this overflows register (there is a subsequent offset subtraction)
+  let mut returned_exp:Vec<bool> = integer_add(
+    &vec![vec![false], vector_one[1..(expwidth as usize +1)].to_vec()].concat(), 
+    &vec![vec![false], vector_two[1..(expwidth as usize +1)].to_vec()].concat()
+  );
+  
 
-  // note that if the returned vector is less than inputs
-  // it signals an exponent overflow scenario
-  if !integer_greaterthan(&returned_exp, &vector_one[1..(expwidth as usize +1)].to_vec()) || !integer_greaterthan(&returned_exp, &vector_two[1..(expwidth as usize +1)].to_vec()) {
-    // exponent overflow scenario
-    // return saturation value
+  println!("");
+  println!("returned_exp from integer_add");
+  println!("{:?}", returned_exp);
 
-    // *****special encoding support for inf/neg_inf/nan pending
-    
-    let mut returned_overflow_vec:Vec<bool> = vec![];
+  let mut exp_underflow:bool = false;
+  let mut exp_overflow:bool = false;
 
-    returned_overflow_vec.push(returned_sign_bit);
+  if !returned_exp[0] {
 
-    for _i in 0..(vector_one.len() - 1) {
-      returned_overflow_vec.push(true);
-    }
-    
-    return returned_overflow_vec;
-    
+    println!("checkpoint !returned_exp[0], exp_underflow = true");
+    // possible underflow scenario
+    // still pending result of offset subtraction
+    // set conditional marker pending further inspection
+    exp_underflow = true;
   }
 
-  returned_exp = bitwise_rightshift(&returned_exp);
+  
+  println!("returned_exp");
+  println!("{:?}", returned_exp);
+  println!("");
+  println!("offset integer");
+  println!("{:?}", &(vec![vec![false; 2], vec![true; (expwidth as usize) - 1]].concat()));
+  println!("");
+
+  // now we subtract the offset
+  // (if the offset configuration was variable this might need to be adjustred)
+  returned_exp = integer_subtract(&returned_exp, &(vec![vec![false; 2], vec![true; (expwidth as usize) - 1]].concat()));
+
+  println!("");
+  println!("returned_exp from integer_subtract of offset");
+  println!("{:?}", returned_exp);
+
+  // note that if the returned exp vector has activation in top bit
+  // it signals an exponent underflow scenario
+  // otherwise we can just remove the leading bit
+
+  
+
+  
+  if !returned_exp[0] {
+
+    println!("fp_multiply checkpoint exp_underflow = false");
+    
+    // non underflow scenario
+    returned_exp.remove(0);
+
+    exp_underflow = false;
+
+  } else if exp_underflow {
+
+    println!("fp_multiply checkpoint exp_underflow = true");
+
+    // println!("underflow scenario a");
+    // exponent underflow scenario
+    // return underflow 
+    returned_exp = vec![false; expwidth as usize];
+
+  } else {
+
+    println!("fp_multiply checkpoint exp_overflow = true");
+    
+    // println!("overflow scenario b");
+    // exponent underflow scenario
+    // return underflow 
+    returned_exp = vec![true; expwidth as usize];
+    exp_overflow = true;
+  }
+
+  // // now we subtract the offset
+  // returned_exp = integer_subtract(&returned_exp, &(vec![vec![false; 2], vec![true; (expwidth as usize) - 1]].concat()));
+  
+
+  // // note that if the returned vector is less than inputs
+  // // it signals an exponent overflow scenario
+  // if !integer_greaterthan(&returned_exp, &vector_one[1..(expwidth as usize +1)].to_vec()) || !integer_greaterthan(&returned_exp, &vector_two[1..(expwidth as usize +1)].to_vec()) {
+  //   // exponent overflow scenario
+  //   // return saturation value
+
+  //   println!("exponent overflow scenario");
+
+  //   // *****special encoding support for inf/neg_inf/nan pending
+    
+  //   let mut returned_overflow_vec:Vec<bool> = vec![];
+
+  //   returned_overflow_vec.push(returned_sign_bit);
+
+  //   for _i in 0..(vector_one.len() - 1) {
+  //     returned_overflow_vec.push(true);
+  //   }
+    
+  //   return returned_overflow_vec;
+    
+  // }
+
+  // returned_exp = bitwise_rightshift(&returned_exp);
+
+  // returned_exp = integer_subtract(&returned_exp, )
 
 // fn integer_greaterthan(vector_one:&Vec<bool>, vector_two:&Vec<bool>) -> bool {
 
@@ -3288,10 +5097,10 @@ fn fp_multiply(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, specia
 
   let mut mantissa_product:Vec<bool> = mantissa_multiply(&mantissa_one, &mantissa_two);
 
-  // println!("mantissa_one = {:?}", mantissa_one);
-  // println!("mantissa_two = {:?}", mantissa_two);
-  // println!("result of mantissa product is:");
-  // println!("{:?}", mantissa_product);
+  println!("mantissa_one = {:?}", mantissa_one);
+  println!("mantissa_two = {:?}", mantissa_two);
+  println!("result of mantissa product (including leading registers) is:");
+  println!("{:?}", mantissa_product);
 
   // the returned mantissa includes added 2^1 and 2^0 registers
   // we can expect that these registers will 
@@ -3306,7 +5115,14 @@ fn fp_multiply(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, specia
     
     exponent_adder[exponent_adder_len-1] = true;
 
-    returned_exp = integer_add(&returned_exp, &exponent_adder);
+    if !exp_underflow {
+      returned_exp = integer_add(&returned_exp, &exponent_adder);
+
+      if !returned_exp.contains(&true) {
+        exp_underflow = true;
+      }
+      
+    }
 
     // add extra bit to mantissa to retain precision
     mantissa_product.push(false);
@@ -3326,19 +5142,156 @@ fn fp_multiply(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, specia
 
   // great now is just a matter of combining components
 
-  let mut output_vector:Vec<bool> = vec![];
-  
-  output_vector.push(returned_sign_bit);
+  if exp_underflow {
 
-  for entry in returned_exp.iter() {
-    output_vector.push(*entry);
+    println!("return scenario 1");
+    // return underflow
+    return vec![false; vector_one.len()];
+
+  } else if exp_overflow {
+
+    println!("return scenario 2");
+    
+    // return overflow
+    return vec![vec![returned_sign_bit], vec![true; vector_one.len() - 1]].concat();
+    
+  } else {
+
+    println!("return scenario 3");
+
+    let mut output_vector:Vec<bool> = vec![];
+    
+    output_vector.push(returned_sign_bit);
+  
+    for entry in returned_exp.iter() {
+      output_vector.push(*entry);
+    }
+  
+    for entry in mantissa_product.iter() {
+      output_vector.push(*entry);
+    }
+
+    println!("output_vector");
+    println!("{:?}", output_vector);
+    println!("");
+    
+    return output_vector;
+    
+  }
+}
+
+
+fn fp_multiply_variable_exp(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_encodings:&SpecialEncodings) -> (Vec<bool>, u8) {
+  // performs an fp_add on vectors one and two
+  // and if the output is a saturation value
+  // expands the exponent register and tries again
+  // in order for this to work in context of special encodings
+  // we'll need to inspect for encodings prior to calling fp_add
+  // this also differs from fp_add in that 
+  // it returns a tuple with second entry the resulting exp_width
+
+  // ___________
+
+  // ok first we'll check inputs for special encodings
+  // we'll have following conventions:
+  // if either input is NaN, output is NaN
+  // if INF * NEG_INF, output is NEG_INF
+  // if INF * INF, output is INF
+  // if NEG_INF * NEG_INF, output is INF
+  // any value or negzero times zero is zero
+  // anything else times negzero is negzero
+
+  let special_value_result_one:f32 = special_encodings.check_for_reserved_encoding(vector_one);
+
+  let special_value_result_two:f32 = special_encodings.check_for_reserved_encoding(vector_two);
+
+  // if either fp is a special value, walk through scenarios
+  // (when values aren't special encodings returned as 1.0f32)
+  if !(special_value_result_one == 1.0f32 && special_value_result_two == 1.0f32) {
+
+    // if either input is NaN, output is NaN
+    if f32::is_nan(special_value_result_one) || f32::is_nan(special_value_result_two) {
+      // return (*special_encodings.nan).to_vec();
+      return ((*special_encodings.nan).to_vec(), expwidth);
+    } else if special_value_result_one == f32::INFINITY {
+      // if INF times NEG_INF, output is NEG_INF
+      // if INF times INF, output is INF
+      // if NEG_INF times NEG_INF, output is INF
+      if special_value_result_two == f32::INFINITY {
+        return ((*special_encodings.infinity).to_vec(), expwidth);
+      } else if special_value_result_two == f32::NEG_INFINITY {
+        return ((*special_encodings.neginfinity).to_vec(), expwidth);
+      }
+      
+    } else if special_value_result_one == f32::NEG_INFINITY {
+      // if INF plus NEG_INF, output is NaN
+      // if INF plus INF, output is INF
+      // if NEG_INF plus NEG_INF, output is NEG_INF
+      if special_value_result_two == f32::NEG_INFINITY {
+        return ((*special_encodings.infinity).to_vec(), expwidth);
+      } else if special_value_result_two == f32::INFINITY {
+        return ((*special_encodings.neginfinity).to_vec(), expwidth);
+      }
+    } else if special_value_result_one == 0. || special_value_result_two == 0. {
+      return ((*special_encodings.zero).to_vec(), expwidth);
+    } else if special_value_result_one == -0. || special_value_result_two == -0. {
+      return ((*special_encodings.negzero).to_vec(), expwidth);
+    }
   }
 
-  for entry in mantissa_product.iter() {
-    output_vector.push(*entry);
+  // ___________
+
+  // great now can call fp_add
+  let returned_vec:Vec<bool> = fp_multiply(&vector_one, &vector_two, expwidth, &special_encodings);
+
+  let mut is_not_saturated:bool = true;
+
+  println!("");
+  println!("within fp_multiply_variable_exp");
+  println!("");
+  println!("vector_one = {:?}", vector_one);
+  println!("{}", get_value(&vector_one, expwidth, &special_encodings));
+  println!("vector_two = {:?}", vector_two);
+  println!("{}", get_value(&vector_two, expwidth, &special_encodings));
+  println!("returned_vec from fp_multiply:");
+  println!("{:?}", returned_vec);
+
+  if !returned_vec[1..].contains(&false) || !returned_vec[1..].contains(&true) {
+    
+    is_not_saturated = false;
+    
+  }
+
+  if is_not_saturated {
+
+    return (returned_vec, expwidth);
+
+  } else {
+
+    // initialize expanded exponent register
+    let mut adjusted_exp_one:Vec<bool> = vector_one[1..(expwidth as usize +1)].to_vec();
+
+    let mut adjusted_exp_two:Vec<bool> = vector_two[1..(expwidth as usize +1)].to_vec();
+
+    // derive the expanded form
+    adjusted_exp_one = expand_exp_register(&adjusted_exp_one);
+
+    adjusted_exp_two = expand_exp_register(&adjusted_exp_two);
+
+    // adjusted exponent width is one larger
+    let adusted_exp_width:u8 = expwidth + 1;
+
+    //now aggregate the expanded encodings
+    let adjusted_vector_one:Vec<bool> = vec![vec![vector_one[0]], adjusted_exp_one, vector_one[(1+expwidth as usize)..].to_vec().clone()].concat();
+
+    let adjusted_vector_two:Vec<bool> = vec![vec![vector_two[0]], adjusted_exp_two, vector_two[(1+expwidth as usize)..].to_vec().clone()].concat();
+
+    // now pass those adjustments, which won't be saturated, back to this function
+
+    return fp_multiply_variable_exp(&adjusted_vector_one, &adjusted_vector_two, adusted_exp_width, &special_encodings)
+ 
   }
   
-  return output_vector;
 }
 
 fn fp_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
@@ -3409,12 +5362,15 @@ fn fp_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_
   let returned_sign_bit:bool = vector_one[0] ^ vector_two[0]; // (based on XOR)
 
   // get the two exponents
-  let mut exp_one:Vec<bool> = vector_one[1..(expwidth as usize +1)].to_vec().clone();
+  // and apply a leftside null pad to avoid underflow
+  let mut exp_one:Vec<bool> = vec![vec![false], vector_one[1..(expwidth as usize +1)].to_vec().clone()].concat();
 
-  let exp_two:Vec<bool> = vector_two[1..(expwidth as usize +1)].to_vec();
+  let exp_two:Vec<bool> = vec![vec![false], vector_two[1..(expwidth as usize +1)].to_vec()].concat();
 
   // find out which exp is greater
   let exp_one_greater:bool = integer_greaterthan(&exp_one, &exp_two);
+
+  // println!("exp_one_greater = {}", exp_one_greater);
 
   // find the delta betwee the exponents
   let mut exp_delta:Vec<bool> = vec![];
@@ -3425,20 +5381,60 @@ fn fp_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_
     exp_delta = integer_subtract(&exp_two, &exp_one);
   }
 
+  // println!("exp_delta = {:?}", exp_delta);
+
   // initialize returned exponent
   // may be further adjusted below based on mantissas
   // for now will either add or subtract the exp_delta from exp_one
   // and store result in the exp_one variable
 
+  let offset_vector:Vec<bool> = vec![vec![false; 2], vec![true; (expwidth as usize) - 1]].concat();
+
+  // println!("offset_vector = {:?}", offset_vector);
+
+  let mut exp_overflow:bool = false;
+  let mut exp_underflow:bool = false;
+  
   // when exp_one_greater, the output will be bigger
   // so add to the exponent
   if exp_one_greater {
-    exp_one = integer_add(&exp_one, &exp_delta);
+  // if !exp_one_greater {
+    // println!("delta with integer_add case");
+    // exp_one = integer_add(&exp_one, &exp_delta);
+    exp_one = integer_add(&offset_vector, &exp_delta);
+
+    if exp_one[0] {
+      exp_overflow = true;
+    }
+    
   } else {
     // else the output will be smaller
     // so subtract from the exponent
-    exp_one = integer_subtract(&exp_one, &exp_delta);
+    // println!("delta with integer_subtract case");
+    // exp_one = integer_subtract(&exp_one, &exp_delta);
+    exp_one = integer_subtract(&offset_vector, &exp_delta);
+
+    if exp_one[0] {
+      exp_underflow = true;
+    }
+    
   }
+
+  // println!("exp_overflow = {}", exp_overflow);
+  // println!("exp_underflow = {}", exp_underflow);
+
+  // println!("exp_one after incorproating the delta");
+  // println!("{:?}", exp_one);
+  
+
+  // // now we add the offset back in
+  // // (if the offset configuration was variable this might need to be adjustred)
+  // exp_one = integer_add(&exp_one, &(vec![vec![false; 2], vec![true; (expwidth as usize) - 1]].concat()));
+
+  // println!("exp_one after adding the offset back on");
+  // println!("{:?}", exp_one);
+
+  // _____
 
   // great now we can look at mantissas
 
@@ -3450,6 +5446,12 @@ fn fp_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_
   // add the leading bit to the mantissas
   mantissa_one.insert(0, true);
   mantissa_two.insert(0, true);
+
+  // println!("mantissa_one with leading pad bit");
+  // println!("{:?}", mantissa_one);
+  // println!("mantissa_two with leading pad bit");
+  // println!("{:?}", mantissa_two);
+  
 
   // note that our integer_divide function will return 0
   // for cases where mantissa_two > mantissa_one
@@ -3463,17 +5465,66 @@ fn fp_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_
   // until recover the original activation range
   // (every leftshift on mantissa bits equals exp bits decrement)
 
-  let pad_len:u8 = mantissa_one.len() as u8;
+  let pad_len:usize = (mantissa_one.len() - 1);
+  // println!("pad_len = {}", pad_len);
 
-  for _i in 0..pad_len {
-    mantissa_one.push(false);
-    mantissa_two.insert(0, false);
+  let pad_vector:Vec<bool> = vec![false; pad_len];
+
+  // so we're going to divide mantissa_one / mantissa_two
+  // to facilitate we will pad mantissa_one on right
+  // and pad mantissa_two on left
+  // mantissa_one = vec![mantissa_one, vec![false; pad_len], vec![false; pad_len]].concat();
+
+  // mantissa_two = vec![vec![false; pad_len], mantissa_two, vec![false; pad_len]].concat();
+
+  // want to try following
+  // mantissa_one gets mantissa, 3 pads
+  // mantissa_two gets 2 pads, mantissa, 1 pad
+
+  // so for more precision here, I think it is justa a matter of increasing the pad size?
+
+
+  // _______
+  // this seems to work without full mantissa precision
+  // note that this corresponds to this for loop below
+  //  for _i in 0..(2 * pad_len) {
+  
+  // mantissa_one = vec![mantissa_one, vec![false; pad_len * 3]].concat();
+
+  // mantissa_two = vec![vec![false; pad_len * 2], mantissa_two, vec![false; pad_len]].concat();
+
+  // for larger pad sizes the memory appears to choke
+  let mut pad_multiplier:usize = 4;
+  if pad_len > 3 {
+    if pad_len > 5 {
+      pad_multiplier = 1;
+    } else {
+      pad_multiplier = 2;
+    }
   }
 
-  // println!("#############################");
-  // println!("troubleshoot checkpoint 1111");
-  // println!("");
+  // ok this appears to work well
+  // I think to increase the precision could increase this multiplier with corresponding increase to the for loop length below
+  mantissa_one = vec![mantissa_one, vec![false; pad_len * pad_multiplier]].concat();
 
+  mantissa_two = vec![vec![false; pad_len * pad_multiplier], mantissa_two].concat();
+  
+  // _______
+
+  // // _______
+  // // trying to figure out how to increase precision in mantissa registers
+  // // so integer divide is going to keep number of registers and treat bottom regiser as a rightside aligned integer
+  // // the purpose of the rightside / leftside padding
+  // // is to support acccomodating both scenarios of one>two or two>one
+  // // the thing is that fp_divide isn't really a critical item for infinite preciison in context of ML applications
+  // // so might just table this and focus on higher order aggregations for now
+  // mantissa_one = vec![mantissa_one, vec![false; pad_len * 3]].concat();
+
+  // mantissa_two = vec![vec![false; pad_len * 2], mantissa_two, vec![false; pad_len]].concat();
+
+  // // _______________
+
+  // println!("mantissas after padding");
   // println!("mantissa_one {:?}", mantissa_one);
   // println!("mantissa_two {:?}", mantissa_two);
 
@@ -3489,7 +5540,9 @@ fn fp_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_
 
   // now we'll leftshift mantissa and increment exp
   // for the padding length
-  for _i in 0..pad_len {
+  // for _i in 0..pad_len { //(2 * pad_len) {
+  // for _i in 0..3 { //(2 * pad_len) {
+  for _i in 0..pad_len { //(2 * pad_len) {
 
     // println!("_i = {}", _i);
 
@@ -3514,10 +5567,35 @@ fn fp_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_
     
   }
 
+  // now that we've struck the pad_len padding
+  // if the leading mantissa bit isn't active
+  // we'll shift a few more registers with exp decrement
+  if !mantissa_one[0] {
+    for i in 0..pad_len {
+      if !mantissa_one[0] {
+
+        mantissa_one = bitwise_leftshift(&mantissa_one);
+
+        mantissa_one.remove(mantissa_one.len() - 1);
+
+        exp_one = integer_decrement(&exp_one);
+
+      } else {
+        break
+      }
+    }
+  }
+
+  // println!("");
+  // println!("after the mantissa letshift, befroe strike leading bit");
+  // // println!("exp_one");
+  // println!("exp_one      {:?}", exp_one);
+  // println!("mantissa_one {:?}", mantissa_one);
+
   // inspect the leading mantissa bit
   // if null then decrement exp one more time
   // and then strike leading mantissa bit
-  if mantissa_one[0] {
+  if !mantissa_one[0] {
 
     // exp increment takes place at 2^0
     // the bias of exponent is based on 2^(expwidth-1) - 1
@@ -3533,22 +5611,47 @@ fn fp_divide(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, special_
 
     // exp_one = integer_add(&exp_one, &exp_incrementer);
 
-    exp_one = integer_increment(&exp_one);
+    exp_one = integer_decrement(&exp_one);
 
   }
 
   mantissa_one.remove(0);
+
+  // now check for exp overflow or underflow
+
+  if exp_one[0] {
+    if exp_one_greater {
+      exp_overflow = true;
+    } else {
+      exp_underflow = true;
+    }    
+  }
 
   // println!("");
   // println!("after the leading bit strike");
   // println!("exp_one");
   // println!("exp_one      {:?}", exp_one);
   // println!("mantissa_one {:?}", mantissa_one);
-  
-  // combine sets to the output_vector
-  let output_vector:Vec<bool> = vec![ vec![returned_sign_bit], exp_one, mantissa_one].concat();
 
-  return output_vector;
+  // now strike the leading pad bit in exponent
+  exp_one.remove(0);
+
+  if exp_underflow {
+    // return underflow
+    // right now this doesn't consider signed zero
+    return vec![false; vector_one.len()];
+
+  } else if exp_overflow {
+    // return overflow
+    return vec![vec![returned_sign_bit], vec![true; vector_one.len() - 1]].concat();
+    
+  } else {
+    
+    // combine sets to the output_vector
+    let output_vector:Vec<bool> = vec![ vec![returned_sign_bit], exp_one, mantissa_one].concat();
+
+    return output_vector;
+  }
 }
 
 fn fp_abs(vector_one:&Vec<bool>, special_encodings:&SpecialEncodings) -> Vec<bool> {
@@ -3745,57 +5848,93 @@ fn fp_greaterthan(vector_one:&Vec<bool>, vector_two:&Vec<bool>, expwidth:u8, spe
   if !vector_one[0] && vector_two[0] {
     // if positive vector_one and negative vector_two
     // reurn true
+    // println!("fp_gt one");
 
     returned_result = true;
     
   } else if vector_one[0] && !vector_two[0] {
     // if negative vector_one and positive vector_two
-
+    // println!("fp_gt two");
     returned_result = false;
     
   } else {
-
+    // println!("fp_gt three");
     // compare exponents
+
+    // the equal case returns true
+    if vector_one == vector_two {
+      return true;
+    }
 
     if integer_greaterthan(&vector_one[1..(expwidth as usize + 1)].to_vec(), &vector_two[1..(expwidth as usize + 1)].to_vec()) {
 
-      returned_result = true;
-      
-    } else if &vector_one[1..(expwidth as usize + 1)] == &vector_two[1..(expwidth as usize + 1)] {
-      // else if exponents are the same
-      // compare the mantissas
-      // noting that the result needs to consider sign
+      if vector_one[1..(expwidth as usize + 1)] != vector_two[1..(expwidth as usize + 1)] {
 
-      if integer_greaterthan(&vector_one[(expwidth as usize + 1)..].to_vec(), &vector_two[(expwidth as usize + 1)..].to_vec()) {
-
-        if vector_one[0] && vector_two[0] {
-          // for positive integers with same exponent
-          // a greater mantissa one returns true
-          // (mixed sign case already considered above)
-          returned_result = true;
-        } else {
-          returned_result = false;
-        }
-
-      } else {
-        // this is case where mantissa_one < mantissa_two
-        if vector_one[0] && vector_two[0] {
-          // for positive integers with same exponent
-          // a greater mantissa two returns false
-          // (mixed sign case already considered above)
-          returned_result = false;
-        } else {
-          returned_result = true;
-        }
+        returned_result = true;
         
+      } else {
+        // else if exponents were equal, check the mantissa
+        // note that this operation assumes equivalent precision between inputs
+        // and will need to consider sign
+        // at this pont have already established that signs are same
+
+        let mantissa_one_greaterthan_two = integer_greaterthan(&vector_one[(expwidth as usize + 1)..].to_vec(), &vector_two[(expwidth as usize + 1)..].to_vec());
+
+        if mantissa_one_greaterthan_two {
+          if !vector_one[0] {
+            // one > two and both values are positive
+            return true;
+          } else {
+            // one > two and both values are negative
+            return false;
+          }
+        } else {
+          if !vector_one[0] {
+            // two > one and both values are positive
+            return false;
+          } else {
+            // two > one and both values are negative
+            return true;
+          }
+        }
       }
-
     }
+    //redundant
+    // } else if &vector_one[1..(expwidth as usize + 1)] == &vector_two[1..(expwidth as usize + 1)] {
+    //   // else if exponents are the same
+    //   // compare the mantissas
+    //   // noting that the result needs to consider sign
 
-    if vector_one[0] && vector_two[0] {
-      // if both are negative flip result
-      returned_result = !returned_result;
-    }
+    //   if integer_greaterthan(&vector_one[(expwidth as usize + 1)..].to_vec(), &vector_two[(expwidth as usize + 1)..].to_vec()) {
+
+    //     if vector_one[0] && vector_two[0] {
+    //       // for positive integers with same exponent
+    //       // a greater mantissa one returns true
+    //       // (mixed sign case already considered above)
+    //       returned_result = true;
+    //     } else {
+    //       returned_result = false;
+    //     }
+
+    //   } else {
+    //     // this is case where mantissa_one < mantissa_two
+    //     if vector_one[0] && vector_two[0] {
+    //       // for positive integers with same exponent
+    //       // a greater mantissa two returns false
+    //       // (mixed sign case already considered above)
+    //       returned_result = false;
+    //     } else {
+    //       returned_result = true;
+    //     }
+        
+    //   }
+
+    // }
+
+    // if vector_one[0] && vector_two[0] {
+    //   // if both are negative flip result
+    //   returned_result = !returned_result;
+    // }
     
   }
 
@@ -3848,7 +5987,19 @@ fn fp_match_precision(vector_input:&Vec<bool>, expwidth_one:u8, bitwidth_two:u8,
   // we'll have convention that if user passes bitwidth_two = 0
   // then bitwidth_two retains width achieved after exp conversion
 
+  // println!("fp_match_precision checkpoint 1");
+  // println!("");
+
   let mut output_vector = fp_convert_exp_precision(&vector_input, expwidth_one, expwidth_two, &special_encodings);
+
+  // println!("fp_match_precision checkpoint 2");
+  // println!("");
+
+  // println!("output_vector = fp_convert_mantissa_precision(&output_vector, expwidth_two, bitwidth_two, &special_encodings);");
+  // println!("output_vector = {:?}", output_vector);
+  // println!("expwidth_two = {}", expwidth_two);
+  // println!("bitwidth_two = {}", bitwidth_two);
+  // println!("");
 
   // println!("before calling fp_convert_mantissa_precision");
   // println!("output_vector {:?}", output_vector);
@@ -3856,6 +6007,9 @@ fn fp_match_precision(vector_input:&Vec<bool>, expwidth_one:u8, bitwidth_two:u8,
   // println!("bitwidth_two {}", bitwidth_two);
 
   output_vector = fp_convert_mantissa_precision(&output_vector, expwidth_two, bitwidth_two, &special_encodings);
+
+  // println!("fp_match_precision checkpoint 3");
+  // println!("");
 
   return output_vector;
 }
@@ -3951,9 +6105,7 @@ fn fp_convert_exp_precision(vector_input:&Vec<bool>, expwidth_input:u8, expwidth
         output_exp[0] = !output_exp[0];
         
       }
-
     }
-    
   }
 
   // combine sets to the output_vector
@@ -3974,6 +6126,9 @@ fn fp_convert_mantissa_precision(vector_input:&Vec<bool>, expwidth:u8, output_bi
   // such that output_vector retains same expwidth basis
   // and output_vector has output_bitwidth basis
 
+  // println!("fp_convert_mantissa_precision checkpoint 1");
+  // println!("");
+
   // ****
   // we'll have convention that if user passes bitwidth_two = 0
   // then bitwidth_two retains input width 
@@ -3990,7 +6145,13 @@ fn fp_convert_mantissa_precision(vector_input:&Vec<bool>, expwidth:u8, output_bi
 
   let input_mantissa_width:usize = vector_input.len() - 1 - expwidth as usize;
 
-  if output_bitwidth > input_bitwidth {
+  // println!("fp_convert_mantissa_precision checkpoint 2");
+  // println!("");
+
+  if final_output_bitwidth > input_bitwidth {
+
+    // println!("fp_convert_mantissa_precision checkpoint 3");
+    // println!("");
 
     // in an alternate configuration
     // when increasing mantissa width
@@ -4001,20 +6162,35 @@ fn fp_convert_mantissa_precision(vector_input:&Vec<bool>, expwidth:u8, output_bi
       stochastic_rounding_sample = sample_bool();
     }
 
-    for i in 0..(output_bitwidth - input_bitwidth) {
+    for i in 0..(final_output_bitwidth - input_bitwidth) {
       output_vector.push(stochastic_rounding_sample);
 
     }
 
-  } else if output_bitwidth < input_bitwidth {
+  } else if final_output_bitwidth < input_bitwidth {
 
-    let i_max = input_bitwidth - output_bitwidth - 1;
+    // println!("");
+    // println!("final_output_bitwidth = {}", final_output_bitwidth);
+    // println!("input_bitwidth = {}", input_bitwidth);
+    // println!("");
+
+    // println!("fp_convert_mantissa_precision checkpoint 4");
+    // println!("");
+
+    let i_max = input_bitwidth - final_output_bitwidth - 1;
+
+    // println!("i_max = {}", i_max);
     
-    for i in 0..(input_bitwidth - output_bitwidth) {
+    for i in 0..(input_bitwidth - final_output_bitwidth) {
+
+      // println!("for i in 0..(input_bitwidth - final_output_bitwidth)");
+      // println!("i = {}", i);
       // println!("i = {}", i);
       // println!("i_max = {}", i_max);
       
       let current_full_vector_length = output_vector.len() as usize;
+
+      // println!("current_full_vector_length = {}", current_full_vector_length);
 
       // println!("current_full_vector_length = {}", current_full_vector_length);
 
@@ -4036,8 +6212,14 @@ fn fp_convert_mantissa_precision(vector_input:&Vec<bool>, expwidth:u8, output_bi
       // println!("output_vector");
       // println!("{:?}", output_vector);
 
+      // println!("fp_convert_mantissa_precision checkpoint 5");
+      // println!("");
+
       
       if !stochastic_rounding_sample && output_vector[current_full_vector_length - 1] {
+
+        // println!("fp_convert_mantissa_precision checkpoint 6");
+        // println!("");
 
         // if entry to strike has active register
         // increment mantissa before strike
@@ -4045,6 +6227,13 @@ fn fp_convert_mantissa_precision(vector_input:&Vec<bool>, expwidth:u8, output_bi
         // we'll need to increment exponent 
         // which takes place internal to increment_mantissa
 
+        // println!("output_vector = fp_increment_mantissa(&output_vector, expwidth);");
+        // println!("output_vector {:?}", output_vector);
+        // println!("expwidth {:?}", expwidth);
+        // println!("");
+
+        // I think this might be source of issue
+        // println!("// I think this might be source of issue");
         output_vector = fp_increment_mantissa(&output_vector, expwidth);
 
         // if stochastic_rounding_sample {
@@ -4053,6 +6242,9 @@ fn fp_convert_mantissa_precision(vector_input:&Vec<bool>, expwidth:u8, output_bi
         //   output_vector = fp_increment_mantissa(&output_vector, expwidth);
         // }
       } else if stochastic_rounding_sample && !output_vector[current_full_vector_length - 1] {
+
+        // println!("fp_convert_mantissa_precision checkpoint 7");
+        // println!("");
 
         // when stochastic rounding applied and sampled as true
         // if trailing bit was null we'll increment twice
@@ -4064,6 +6256,9 @@ fn fp_convert_mantissa_precision(vector_input:&Vec<bool>, expwidth:u8, output_bi
         output_vector = fp_increment_mantissa(&output_vector, expwidth);
         
       }
+
+      // println!("fp_convert_mantissa_precision checkpoint 8");
+      // println!("");
 
       // println!("current_full_vector_length {}", current_full_vector_length);
       //now strike trailing mantissa register
@@ -4194,7 +6389,14 @@ fn fp_compare(vector_one:&Vec<bool>, vector_two:&Vec<bool>, tolerance:&Vec<bool>
 
   if basis_vector_is_one {
 
-    converted_vector_two = fp_match_precision(&vector_two, expwidth_two, vector_one.len() as u8, expwidth_one, &special_encodings);
+    converted_vector_two = 
+      fp_match_precision(
+        &vector_two, 
+        expwidth_two, 
+        vector_one.len() as u8, 
+        expwidth_one, 
+        &special_encodings
+      );
 
     converted_vector_one = vector_one.clone();
 
@@ -4203,7 +6405,14 @@ fn fp_compare(vector_one:&Vec<bool>, vector_two:&Vec<bool>, tolerance:&Vec<bool>
 
   } else {
 
-    converted_vector_one = fp_match_precision(&vector_one, expwidth_one, vector_two.len() as u8, expwidth_two, &special_encodings);
+    converted_vector_one = 
+      fp_match_precision(
+        &vector_one, 
+        expwidth_one, 
+        vector_two.len() as u8, 
+        expwidth_two, 
+        &special_encodings
+      );
 
     converted_vector_two = vector_two.clone();
 
@@ -4217,7 +6426,14 @@ fn fp_compare(vector_one:&Vec<bool>, vector_two:&Vec<bool>, tolerance:&Vec<bool>
 
   if expwidth_tol != converted_expwidth || converted_tolerance.len() != converted_bitwidth as usize {
 
-    converted_tolerance = fp_match_precision(&tolerance, expwidth_tol, converted_bitwidth, converted_expwidth, &special_encodings);
+    converted_tolerance = 
+      fp_match_precision(
+        &tolerance, 
+        expwidth_tol, 
+        converted_bitwidth, 
+        converted_expwidth, 
+        &special_encodings
+      );
     
   } else {
 
@@ -4235,31 +6451,109 @@ fn fp_compare(vector_one:&Vec<bool>, vector_two:&Vec<bool>, tolerance:&Vec<bool>
     // abs(u - v)/abs(u) <= epsilon || 
     // abs(u - v)/abs(v) <= epsilon
 
-    let mut abs_one_minus_two = fp_abs( &fp_subtract(&converted_vector_one, &converted_vector_two, converted_expwidth, &special_encodings), &special_encodings);
+    let mut abs_one_minus_two = 
+      fp_abs(
+        &fp_subtract(
+          &converted_vector_one, 
+          &converted_vector_two, 
+          converted_expwidth, 
+          &special_encodings
+        ), 
+        &special_encodings
+      );
+
+    println!("ok here is before the fp_divide");
+    println!("abs_one_minus_two.len() = {}", abs_one_minus_two.len());
+    println!("converted_vector_one.len() = {}", converted_vector_one.len());
+    println!("converted_expwidth = {}", converted_expwidth);
+    println!("original expwidth_one = {}", expwidth_one);
+    println!("original expwidth_two = {}", expwidth_two);
+
+    // so I think what is needed is to perform a match rpecision in the denominator
+    // fp_match_precision(&converted_vector_one, converted_expwidth, abs_one_minus_two.len() as u8, expwidth_two, &special_encodings)
 
 
-    let mut abs_one_minus_two_dividedby_abs_one = fp_divide(&abs_one_minus_two, &fp_abs(&converted_vector_one, &special_encodings), converted_expwidth, &special_encodings);
+    // let mut abs_one_minus_two_dividedby_abs_one = fp_divide(&abs_one_minus_two, &fp_abs(&converted_vector_one, &special_encodings), converted_expwidth, &special_encodings);
+
+    let mut abs_one_minus_two_dividedby_abs_one = 
+      fp_divide(&abs_one_minus_two, 
+        &fp_abs(
+          &fp_match_precision(
+            &converted_vector_one, 
+            converted_expwidth, 
+            abs_one_minus_two.len() as u8, 
+            expwidth_one, 
+            &special_encodings
+          ), 
+          &special_encodings
+        ), 
+        converted_expwidth, 
+        &special_encodings
+      );
 
 
-    let mut abs_one_minus_two_dividedby_abs_two = fp_divide(&abs_one_minus_two, &fp_abs(&converted_vector_two, &special_encodings), converted_expwidth, &special_encodings);
+    // let mut abs_one_minus_two_dividedby_abs_two = fp_divide(&abs_one_minus_two, &fp_abs(&converted_vector_two, &special_encodings), converted_expwidth, &special_encodings);
+
+    let mut abs_one_minus_two_dividedby_abs_two = 
+      fp_divide(&abs_one_minus_two, 
+        &fp_abs(
+          &fp_match_precision(
+            &converted_vector_two, 
+            converted_expwidth, 
+            abs_one_minus_two.len() as u8, 
+            expwidth_two, 
+            &special_encodings
+          ), 
+          &special_encodings
+        ), 
+        converted_expwidth, 
+        &special_encodings
+      );
 
 
-    returned_result = fp_greaterthan(&converted_tolerance, &abs_one_minus_two_dividedby_abs_one, converted_expwidth, &special_encodings) || fp_greaterthan(&converted_tolerance, &abs_one_minus_two_dividedby_abs_two, converted_expwidth, &special_encodings);
+    returned_result = 
+      fp_greaterthan(
+        &converted_tolerance, 
+        &abs_one_minus_two_dividedby_abs_one, 
+        converted_expwidth, 
+        &special_encodings
+      ) || fp_greaterthan(
+        &converted_tolerance, 
+        &abs_one_minus_two_dividedby_abs_two, 
+        converted_expwidth, 
+        &special_encodings
+      );
 
   } else {
     // when one of values is zero, uses criteria
     // abs(u - v) <= epsilon
 
-    let mut abs_one_minus_two = fp_abs( &fp_subtract(&converted_vector_one, &converted_vector_two, converted_expwidth, &special_encodings), &special_encodings);
+    let mut abs_one_minus_two = 
+      fp_abs( 
+        &fp_subtract(
+          &converted_vector_one, 
+          &converted_vector_two, 
+          converted_expwidth, 
+          &special_encodings
+        ), 
+        &special_encodings
+      );
 
-    returned_result = fp_greaterthan(&converted_tolerance, &abs_one_minus_two, converted_expwidth, &special_encodings);
+    returned_result = 
+      fp_greaterthan(
+        &converted_tolerance, 
+        &abs_one_minus_two, 
+        converted_expwidth, 
+        &special_encodings
+      );
 
   }
 
   return returned_result;
 }
 
-fn fp_FMA(vector_one:&Vec<bool>, vector_two:&Vec<bool>, scale_onetwo:&Vec<bool>, vector_three:&Vec<bool>, expwidth_onetwo:u8, expwidth_three:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
+
+fn fp_FMA(vector_one:&Vec<bool>, vector_two:&Vec<bool>, vector_three:&Vec<bool>, expwidth_onetwo:u8, expwidth_three:u8, special_encodings:&SpecialEncodings) -> (Vec<bool>, u8) {
   // performs fused multiply add operation (FMA)
   // assumes vector_one and vector_two in common precision
   // based on expwidth_onetwo
@@ -4281,6 +6575,9 @@ fn fp_FMA(vector_one:&Vec<bool>, vector_two:&Vec<bool>, scale_onetwo:&Vec<bool>,
   // and returns an output with expwidth_three basis
   // and a variable mantissa size to retain infinite precision
 
+  // println!("fp_FMA checkpoint 1");
+  // println!("");
+
   
   // FMA applies formula
   // (vector_one times vector_two) plus vector_three
@@ -4288,7 +6585,21 @@ fn fp_FMA(vector_one:&Vec<bool>, vector_two:&Vec<bool>, scale_onetwo:&Vec<bool>,
   // multiply vectors one and two
   // assumes common format
   // note that fp_multiply returns variable mantissa width for inf precision
-  let mut vector_one_times_two:Vec<bool> = fp_multiply(&vector_one, &vector_two, expwidth_onetwo, &special_encodings);
+  // let mut vector_one_times_two:Vec<bool> = fp_multiply(&vector_one, &vector_two, expwidth_onetwo, &special_encodings);
+
+  // expwidth_onetwo is input exp width of vectors one and two which we assume are matche
+  // expwidth_one_times_two is output expwidth from the multiply operation
+  // which may be expanded in cases of overflow by fp_multiply_variable_exp
+
+  let mut vector_one_times_two:Vec<bool>;
+  let mut expwidth_one_times_two:u8;
+
+  (vector_one_times_two, expwidth_one_times_two) = fp_multiply_variable_exp(&vector_one, &vector_two, expwidth_onetwo, &special_encodings);
+
+
+
+  // println!("fp_FMA checkpoint 2");
+  // println!("");
 
   // the convention stated above is that output expwidth
   // is based on expwidth_three
@@ -4298,9 +6609,21 @@ fn fp_FMA(vector_one:&Vec<bool>, vector_two:&Vec<bool>, scale_onetwo:&Vec<bool>,
   // to retain infinite precision from multiplicaiton 
   // or any exp conversion
 
+  // println!("before fp_match_precision");
+  // println!("vector_one_times_two = {:?}", vector_one_times_two);
+  // println!("expwidth_onetwo = {}", expwidth_onetwo);
+  // println!("0 = {}", 0);
+  // println!("expwidth_three = {}", expwidth_three);
+  // println!("vector_one_times_two = fp_match_precision(&vector_one_times_two, expwidth_onetwo, 0, expwidth_three, &special_encodings);");
+  // println!("");
+
   // in other words, put simply, here we'll match exp basis
   // between vector_one_times_two and the output
-  vector_one_times_two = fp_match_precision(&vector_one_times_two, expwidth_onetwo, 0, expwidth_three, &special_encodings);
+  vector_one_times_two = fp_match_precision(&vector_one_times_two, expwidth_one_times_two, 0, expwidth_three, &special_encodings);
+
+
+  // println!("fp_FMA checkpoint 3");
+  // println!("");
 
   // initialize output vector based on received vector_three
   let mut output_vector:Vec<bool> = vector_three.clone();
@@ -4318,9 +6641,15 @@ fn fp_FMA(vector_one:&Vec<bool>, vector_two:&Vec<bool>, scale_onetwo:&Vec<bool>,
 
   if vector_one_times_two_len > vector_three_len {
 
+    println!("fp_FMA checkpoint 4");
+    println!("");
+
     output_vector = fp_convert_mantissa_precision(&output_vector, expwidth_three, vector_one_times_two_len as u8, &special_encodings);
     
   } else if vector_one_times_two_len < vector_three_len {
+
+    println!("fp_FMA checkpoint 5");
+    println!("");
 
     vector_one_times_two = fp_convert_mantissa_precision(&vector_one_times_two, expwidth_three, vector_three_len as u8, &special_encodings);
   
@@ -4329,68 +6658,74 @@ fn fp_FMA(vector_one:&Vec<bool>, vector_two:&Vec<bool>, scale_onetwo:&Vec<bool>,
   // _________
 
   // great now that configurations are matched can apply fp_add
-  output_vector = fp_add(&output_vector, &vector_one_times_two, expwidth_three, &special_encodings);
+  // output_vector = fp_add(&output_vector, &vector_one_times_two, expwidth_three, &special_encodings);
 
-  return output_vector;
+  // return output_vector;
+
+  // an extension could integrate the fp_add_variable_exp function
+  // which would negate risk of accumulator overflow
+  // there is a small distinction in that would need
+  // to return a tuple as (output_vector, output_expwidth)
+  // instead of just returning the output_vector
+  // however could get around that if you fix the number of mantissa bits
+
+  // println!("fp_FMA checkpoint 6");
+  // println!("");
+  // println!("fp_add_variable_exp(&output_vector, &vector_one_times_two, expwidth_three, &special_encodings)");
+  // println!("output_vector = {:?}", output_vector);
+  // println!("vector_one_times_two = {:?}", vector_one_times_two);
+  // println!("");
+
+  // println!("before add operation");
+  // println!("get_value(&sampled_array, expwidth, &special_encodings);")
+
+  // (output_vector, output_expwidth) = 
+  return fp_add_variable_exp(&output_vector, &vector_one_times_two, expwidth_three, &special_encodings)
+
+  // would also need to update the function defintion
+  // -> (Vec<bool>, u8)
+  // and update the function call in fp_dot
+  
 }
 
-// fn fp_dot(input_set_one:&Vec<Vec<bool>>, input_set_two:&Vec<Vec<bool>>, scale_onetwo:&Vec<bool>, vector_three:&Vec<bool>, expwidth_onetwo:u8, expwidth_three:u8, special_encodings:&SpecialEncodings) -> (Vec<Vec<bool>>, Vec<Vec<bool>>, Vec<bool>) {
-//   // for floating point dot product
-//   // that accepts a vector of encoded vectors input_set_one
-//   // for dot product with input_set_two
-//   // assumes consistent format and precision between those two inputs (per expwidth_onetwo)
-//   // the vector_three serves as an accumulator
-//   // returns a tuple of three vectors
-//   // the first returned vector is derived from input_set_one
-//   // the second returned vector is derived from input_set_two
-//   // the third returned vector is the accumlator
 
-//   // I might be missing a step associated with deriving scale_onetwo
-//   // wasn't sure if there is a general method
-//   // or if this would be derived externally based on some method
+fn fp_set_scaler(input_set:&Vec<bool>, scalar_vector:&Vec<bool>, bitwidth:u8, expwidth:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
+  // accepts a vector of encoded vectors input_set
+  // containing fp encoded floats of bitwidth and expwidth
+  // used to scale each entry in that set 
+  // by a constant power of two multiplier "exp_scalar"
+  // where scalar_vector is expected as a bool vector
+  // with consistent fp encoding basis as the input_set
+  // and the scaling is achieved by fp_multiply
+  // to each fp encoding entry of input_set_one
+  // and where cases of exp overflow / underflow returns consistent conventions to fp basis
 
-//   let input_set_one_len:usize = input_set_one.len();
+  let input_set_len:usize = input_set.len();
+  let input_set_entry_count = input_set_len / bitwidth as usize;
 
-  
+  // for a first pass am going to populate a new output vector
+  // presumably there may be benefit to editting inplace a mutable input vector
+  // I just am not uyet comfortable with implications surrounding memory management for different computing conventions
+  // and populating a new output vector is used as first pass to establish other conentions of the operation
 
-//   // // assumes input_set_two_len == input_set_one.len
-//   // let input_set_two_len = input_set_two.len()
+  let mut output_set:Vec<bool> = vec![];
 
-//   let mut returned_tuple:(Vec<Vec<bool>>, Vec<Vec<bool>>, Vec<bool>) = (vec![vec![]], vec![vec![]], vec![]);
+  for i in 0..input_set_entry_count {
 
-//   let mut returned_input_set_one:Vec<Vec<bool>> = vec![vec![]];
-//   let mut returned_input_set_two:Vec<Vec<bool>> = vec![vec![]];
-  
-//   let mut returned_vector_three:Vec<bool> = vec![];
-  
+    let target_entry:Vec<bool> = input_set[i..(i + bitwidth as usize)].to_vec();
 
-//   if input_set_one_len > 1 {
-
-//     returned_vector_three:Vec<bool> = fp_FMA(&input_set_one[input_set_one_len-1], &input_set_two[input_set_one_len-1], &scale_onetwo, &vector_three, expwidth_onetwo, expwidth_three, &special_encodings);
-
-//     (returned_input_set_one, returned_input_set_two, returned_vector_three) = fp_dot(&input_set_one[..input_set_one_len-1].to_vec(), &input_set_two[..input_set_one_len-1].to_vec(), &scale_onetwo, &returned_vector_three, expwidth_onetwo, expwidth_three, &special_encodings);
-
+    output_set.extend(
+      fp_multiply(&target_entry, scalar_vector, expwidth, &special_encodings)
+    );
     
-//   } else {
+  }
 
-//     returned_vector_three:Vec<bool> = fp_FMA(&input_set_one[input_set_one_len-1], &input_set_two[input_set_one_len-1], &scale_onetwo, &vector_three, expwidth_onetwo, expwidth_three, &special_encodings);
-
-//     // returned_tuple = (vec![vec![]], vec![vec![]], aummulator_vec);
-
-//     return (returned_input_set_one, returned_input_set_two, returned_vector_three);
-    
-//   }
-
-//   // strike the accumulated entries
-//   returned_input_set_one.remove(input_set_one_len-1);
-//   returned_input_set_two.remove(input_set_one_len-1);
-
-//   return (returned_input_set_one, returned_input_set_two, returned_vector_three);
-// }
+  return output_set;
+}
 
   
-fn fp_dot(input_set_one:&Vec<bool>, input_set_two:&Vec<bool>, bitwidth_onetwo:u8, scale_onetwo:&Vec<bool>, vector_three:&Vec<bool>, expwidth_onetwo:u8, expwidth_three:u8, special_encodings:&SpecialEncodings) -> Vec<bool> {
-  // ** this function hasn't been validated yet
+
+fn fp_dot(input_set_one:&Vec<bool>, input_set_two:&Vec<bool>, bitwidth_onetwo:u8, vector_three:&Vec<bool>, expwidth_onetwo:u8, expwidth_three:u8, special_encodings:&SpecialEncodings) -> (Vec<bool>, u8) {
   
   // for floating point dot product
   // that accepts a vector of encoded vectors input_set_one
@@ -4404,28 +6739,28 @@ fn fp_dot(input_set_one:&Vec<bool>, input_set_two:&Vec<bool>, bitwidth_onetwo:u8
   // the vector_three serves as an accumulator vector
   // returns the result of the dot product from the accumulator
 
-  // for now assumes scale_onetwo is derived externally before top tier call of this function
-  // in an alternate configuration scale_onetwo might be derived specific to a comparison between input_set_one[output_set_one_len..input_set_one_len] and input_set_two[output_set_one_len..input_set_one_len]
 
   let input_set_one_len:usize = input_set_one.len();
   let output_set_one_len:usize = input_set_one_len - bitwidth_onetwo as usize;
+  
+  let mut output_expwidth_three:u8 = expwidth_three;
 
   let mut returned_vector_three:Vec<bool> = vec![];
 
   if input_set_one_len > bitwidth_onetwo as usize {
 
-    returned_vector_three = fp_FMA(&input_set_one[output_set_one_len..input_set_one_len].to_vec(), &input_set_two[output_set_one_len..input_set_one_len].to_vec(), &scale_onetwo, &vector_three, expwidth_onetwo, expwidth_three, &special_encodings);
+    (returned_vector_three, output_expwidth_three) = fp_FMA(&input_set_one[output_set_one_len..input_set_one_len].to_vec(), &input_set_two[output_set_one_len..input_set_one_len].to_vec(), &vector_three, expwidth_onetwo, output_expwidth_three, &special_encodings);
 
 
-    returned_vector_three = fp_dot(&input_set_one[..output_set_one_len].to_vec(), &input_set_two[..output_set_one_len].to_vec(), bitwidth_onetwo, &scale_onetwo, &returned_vector_three, expwidth_onetwo, expwidth_three, &special_encodings);
+    (returned_vector_three, output_expwidth_three) = fp_dot(&input_set_one[..output_set_one_len].to_vec(), &input_set_two[..output_set_one_len].to_vec(), bitwidth_onetwo, &returned_vector_three, expwidth_onetwo, output_expwidth_three, &special_encodings);
 
-    return returned_vector_three;
+    return (returned_vector_three, output_expwidth_three);
 
   } else {
 
-    returned_vector_three = fp_FMA(&input_set_one[output_set_one_len..input_set_one_len].to_vec(), &input_set_two[output_set_one_len..input_set_one_len].to_vec(), &scale_onetwo, &vector_three, expwidth_onetwo, expwidth_three, &special_encodings);
+    (returned_vector_three, output_expwidth_three) = fp_FMA(&input_set_one[output_set_one_len..input_set_one_len].to_vec(), &input_set_two[output_set_one_len..input_set_one_len].to_vec(), &vector_three, expwidth_onetwo, output_expwidth_three, &special_encodings);
 
-    return returned_vector_three;
+    return (returned_vector_three, output_expwidth_three);
     
   }
 
