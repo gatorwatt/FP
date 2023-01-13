@@ -1,3 +1,6 @@
+// Copyright 2023 Nicholas Teague
+// released under BSD-3-Clause license
+
 // subnormal support for floating operations pending
 // (for now treating zero as a special encoding)
 // special encoding support for mixed precision pending
