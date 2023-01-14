@@ -1823,11 +1823,11 @@ fn encode_posits_float(target_number:f64, bitwidth:u8, expwidth:u8, posit_config
   
   let mut mantissa_value:f64 = &target_number.abs() / min_abs_set[basis_index];
 
-  if mantissa_value < 1. {
-    mantissa_value = 1.;
-  } else if mantissa_value > max_abs_set[basis_index] {
-    mantissa_value = max_abs_set[basis_index];
-  }
+  // if mantissa_value < 1. {
+  //   mantissa_value = 1.;
+  // } else if mantissa_value > max_abs_set[basis_index] {
+  //   mantissa_value = max_abs_set[basis_index];
+  // }
 
   // println!("mantissa_value = {}", mantissa_value);
 
